@@ -1,0 +1,51 @@
+[project]
+name = "pdf-diff-backend"
+version = "1.0.0"
+description = "PDF diff comparison system backend"
+requires-python = ">=3.11"
+dependencies = [
+    # Web 框架
+    "fastapi==0.115.6",
+    "uvicorn[standard]==0.34.0",
+    "python-multipart==0.0.20",
+    "websockets==14.1",
+    # 数据库
+    "sqlalchemy==2.0.36",
+    "alembic==1.14.0",
+    "psycopg[binary]==3.2.3",
+    # 任务队列
+    "rq==2.0.0",
+    "redis==5.2.1",
+    # 配置 & 认证
+    "pydantic==2.10.4",
+    "pydantic-settings==2.7.0",
+    "python-jose[cryptography]==3.3.0",
+    "passlib[bcrypt]==1.7.4",
+    "bcrypt==4.2.1",
+    # 工具
+    "python-dotenv==1.0.1",
+    "httpx==0.28.1",
+    "structlog==24.4.0",
+    # Pipeline 依赖（继承 MVP）
+    "pymupdf==1.26.5",
+    "rapidocr-onnxruntime==1.4.4",
+    "opencv-python-headless==4.13.0.92",
+    "pillow==11.3.0",
+    "numpy==2.0.2",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest==8.3.4",
+    "pytest-asyncio==0.24.0",
+    "pytest-cov==6.0.0",
+    "ruff==0.8.4",
+]
+
+[tool.ruff]
+line-length = 110
+target-version = "py311"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
