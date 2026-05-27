@@ -120,6 +120,15 @@ def run_comparison(comparison_id: int) -> dict:
             cmp.status = ComparisonStatus.done
             cmp.completed_at = datetime.now(timezone.utc)
             db.commit()
+            # 收集 webhook payload
+            cmp_payload = _comparison_payload(cmp)
+            batch_id = cmp.batch_id
+
+        # 触发事件（同步发送，已在 worker 进程，不阻塞 web）
+        _fire("comparison.done", cmp_payload)
+        if batch_id:
+            _maybe_fire_batch_done(batch_id)
+
         return {"status": "done", "elapsed": elapsed, "diffs": len(diff_items)}
 
     except Exception as exc:
@@ -131,8 +140,67 @@ def run_comparison(comparison_id: int) -> dict:
                 cmp.error_message = f"{type(exc).__name__}: {exc}"
                 cmp.completed_at = datetime.now(timezone.utc)
                 db.commit()
+                payload = _comparison_payload(cmp, error=str(exc))
+                batch_id = cmp.batch_id
+            else:
+                payload = {"id": comparison_id, "error": str(exc)}
+                batch_id = None
         publish_progress(comparison_id, "failed", 100, str(exc))
+        _fire("comparison.failed", payload)
+        if batch_id:
+            _maybe_fire_batch_done(batch_id)
         raise
+
+
+def _comparison_payload(cmp: Comparison, *, error: str | None = None) -> dict:
+    return {
+        "id": cmp.id,
+        "title": cmp.title,
+        "status": cmp.status.value,
+        "batch_id": cmp.batch_id,
+        "summary": cmp.summary_json,
+        "orig_file": {
+            "sha1": cmp.orig_file.sha1, "name": cmp.orig_file.original_name,
+        } if cmp.orig_file else None,
+        "scan_file": {
+            "sha1": cmp.scan_file.sha1, "name": cmp.scan_file.original_name,
+        } if cmp.scan_file else None,
+        "created_at": cmp.created_at.isoformat() if cmp.created_at else None,
+        "completed_at": cmp.completed_at.isoformat() if cmp.completed_at else None,
+        "error": error,
+    }
+
+
+def _fire(event: str, payload: dict) -> None:
+    """安全调用 webhook 触发——异常不应影响主任务结果。"""
+    try:
+        from app.services.webhook import trigger_event
+        trigger_event(event, payload)
+    except Exception as e:
+        log.warning("webhook 触发失败", evt=event, error=str(e))
+
+
+def _maybe_fire_batch_done(batch_id: int) -> None:
+    """检查批量任务是否全部完成，是则触发 batch.done。"""
+    from app.db.models import BatchJob, BatchStatus
+    from app.api.batches import _refresh_batch
+    try:
+        with SessionLocal() as db:
+            _refresh_batch(db, batch_id)
+            batch = db.get(BatchJob, batch_id)
+            if not batch:
+                return
+            if batch.status in (BatchStatus.done, BatchStatus.partial, BatchStatus.failed):
+                payload = {
+                    "id": batch.id, "title": batch.title,
+                    "status": batch.status.value,
+                    "total": batch.total, "completed": batch.completed, "failed": batch.failed,
+                    "created_at": batch.created_at.isoformat() if batch.created_at else None,
+                    "completed_at": batch.completed_at.isoformat() if batch.completed_at else None,
+                }
+                _fire("batch.done", payload)
+    except Exception as e:
+        log.warning("batch.done 触发失败", batch_id=batch_id, error=str(e))
 
 
 def _persist_results(comparison_id: int, diff_items: list) -> None:
