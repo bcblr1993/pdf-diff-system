@@ -13,6 +13,8 @@ from app.services.audit import log_action
 from app.exporters.xlsx import export_xlsx
 from app.exporters.html_report import export_html
 from app.exporters.pdf_report import export_pdf
+from app.exporters.batch_xlsx import export_batch_xlsx
+from app.db.models import BatchJob
 
 
 router = APIRouter(tags=["导出"])
@@ -123,5 +125,37 @@ def export_pdf_report(
     return Response(
         content=content,
         media_type="application/pdf",
+        headers={"Content-Disposition": _content_disposition(fname)},
+    )
+
+
+# ─────────── 批量任务汇总导出 ───────────
+
+@router.get(
+    "/api/batches/{bid}/export.xlsx",
+    summary="导出批量任务汇总 Excel",
+    description="总览 sheet（每份扫描件一行统计）+ 每份扫描件独立 sheet（差异清单）。",
+)
+def export_batch_excel(
+    bid: int,
+    user: CurrentUser,
+    db: Annotated[Session, Depends(get_db)],
+):
+    batch = db.get(BatchJob, bid)
+    if not batch:
+        raise HTTPException(status_code=404, detail="批量任务不存在")
+
+    content = export_batch_xlsx(db, bid)
+    log_action(db, user_id=user.id, action="batch.export",
+               target_type="batch", target_id=bid,
+               payload={"format": "xlsx"})
+    db.commit()
+
+    raw = batch.title or f"batch-{bid}"
+    safe = re.sub(r"\s+", "-", raw.strip())[:80]
+    fname = f"{safe}-批量汇总.xlsx"
+    return Response(
+        content=content,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         headers={"Content-Disposition": _content_disposition(fname)},
     )
