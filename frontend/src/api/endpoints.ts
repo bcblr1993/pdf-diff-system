@@ -109,6 +109,45 @@ export function pdfUrl(cid: number, side: "orig" | "scan") {
   return `/api/comparisons/${cid}/${side}.pdf${token ? `?_=${Date.now()}` : ""}`;
 }
 
+// ─── API Keys（管理员）──────────────────────────────
+import type { ApiKey, ApiKeyCreated, Webhook, WebhookCreated, WebhookDelivery, WebhookEvent } from "@/types";
+
+export async function listApiKeys() {
+  const { data } = await api.get<Page<ApiKey>>("/api/api-keys", { params: { page_size: 200 } });
+  return data;
+}
+export async function createApiKey(body: { name: string; expires_at?: string | null }) {
+  const { data } = await api.post<ApiKeyCreated>("/api/api-keys", body);
+  return data;
+}
+export async function disableApiKey(id: number) {
+  await api.patch(`/api/api-keys/${id}/disable`);
+}
+export async function deleteApiKey(id: number) {
+  await api.delete(`/api/api-keys/${id}`);
+}
+
+// ─── Webhooks（管理员）─────────────────────────────
+export async function listWebhooks() {
+  const { data } = await api.get<Page<Webhook>>("/api/webhooks", { params: { page_size: 200 } });
+  return data;
+}
+export async function createWebhook(body: { name: string; url: string; events: WebhookEvent[] }) {
+  const { data } = await api.post<WebhookCreated>("/api/webhooks", body);
+  return data;
+}
+export async function updateWebhook(id: number, body: Partial<{ name: string; url: string; events: WebhookEvent[]; is_active: boolean }>) {
+  const { data } = await api.patch<Webhook>(`/api/webhooks/${id}`, body);
+  return data;
+}
+export async function deleteWebhook(id: number) {
+  await api.delete(`/api/webhooks/${id}`);
+}
+export async function listWebhookDeliveries(wid: number) {
+  const { data } = await api.get<Page<WebhookDelivery>>(`/api/webhooks/${wid}/deliveries`, { params: { page_size: 50 } });
+  return data;
+}
+
 // ─── 批量任务 ────────────────────────────────────────
 export async function listBatches(params: {
   page?: number;

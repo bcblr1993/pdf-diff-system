@@ -1,6 +1,6 @@
 import { Link, Outlet, useNavigate, useLocation } from "react-router-dom";
 import { Toaster } from "sonner";
-import { LogOut, FileSearch, Plus, Layers } from "lucide-react";
+import { LogOut, FileSearch, Plus, Layers, Key } from "lucide-react";
 import { useAuthStore } from "@/stores/auth";
 
 export default function AppShell() {
@@ -41,6 +41,13 @@ export default function AppShell() {
               <Link to="/new" className="px-3 py-1.5 rounded text-sm text-gray-700 hover:bg-gray-100 inline-flex items-center gap-1">
                 <Plus className="w-3.5 h-3.5" /> 新建
               </Link>
+              {user?.role === "admin" && (
+                <Link to="/integrations" className={`px-3 py-1.5 rounded text-sm hover:bg-gray-100 inline-flex items-center gap-1 ml-auto ${
+                  location.pathname.startsWith("/integrations") ? "text-blue-600 font-medium" : "text-gray-700"
+                }`}>
+                  <Key className="w-3.5 h-3.5" /> 集成
+                </Link>
+              )}
             </nav>
             {user && (
               <div className="flex items-center gap-3 text-sm">

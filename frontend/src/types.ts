@@ -113,6 +113,49 @@ export interface BatchDetail extends BatchBrief {
   comparisons: ComparisonBrief[];
 }
 
+// ─── API Key / Webhook ──────────────────────────────
+export interface ApiKey {
+  id: number;
+  name: string;
+  key_prefix: string;
+  is_active: boolean;
+  expires_at: string | null;
+  last_used_at: string | null;
+  call_count: number;
+  created_by: number | null;
+  created_at: string;
+}
+export interface ApiKeyCreated extends ApiKey {
+  full_key: string;
+}
+
+export type WebhookEvent = "comparison.done" | "comparison.failed" | "batch.done";
+export type WebhookDeliveryStatus = "pending" | "success" | "failed";
+
+export interface Webhook {
+  id: number;
+  name: string;
+  url: string;
+  events_json: string[];
+  is_active: boolean;
+  created_by: number | null;
+  created_at: string;
+}
+export interface WebhookCreated extends Webhook {
+  secret: string;
+}
+export interface WebhookDelivery {
+  id: number;
+  webhook_id: number;
+  event: string;
+  status: WebhookDeliveryStatus;
+  response_status: number | null;
+  attempts: number;
+  error: string | null;
+  created_at: string;
+  completed_at: string | null;
+}
+
 export interface ProgressEvent {
   phase: string;
   pct: number;
