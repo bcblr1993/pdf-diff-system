@@ -60,6 +60,7 @@ def create_app() -> FastAPI:
             {"name": "认证", "description": "登录与当前用户"},
             {"name": "用户管理", "description": "管理员创建/管理用户"},
             {"name": "对比任务", "description": "创建、查询、删除对比任务"},
+            {"name": "批量对比", "description": "1 原件 vs N 扫描件批量任务"},
             {"name": "差异", "description": "差异列表 + 审核动作"},
             {"name": "导出", "description": "Excel / HTML / PDF 审核报告导出"},
             {"name": "健康检查"},
@@ -78,6 +79,7 @@ def create_app() -> FastAPI:
     # 注册路由
     from app.api.auth import router as auth_router, users_router
     from app.api.comparisons import router as cmp_router
+    from app.api.batches import router as batches_router
     from app.api.diffs import router as diffs_router
     from app.api.exports import router as exports_router
     from app.api.health import router as health_router
@@ -87,6 +89,7 @@ def create_app() -> FastAPI:
     app.include_router(auth_router)
     app.include_router(users_router)
     app.include_router(cmp_router)
+    app.include_router(batches_router)
     app.include_router(diffs_router)
     app.include_router(exports_router)
     app.include_router(ws_router)
