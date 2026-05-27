@@ -5,3 +5,5 @@ from .comparison import Comparison, ComparisonStatus, ReviewStatus  # noqa: F401
 from .diff import Diff, DiffCategory, DiffSeverity, ReviewAction  # noqa: F401
 from .audit_log import AuditLog  # noqa: F401
 from .batch import BatchJob, BatchStatus  # noqa: F401
+from .api_key import ApiKey  # noqa: F401
+from .webhook import Webhook, WebhookDelivery, WebhookEvent, WebhookDeliveryStatus  # noqa: F401
