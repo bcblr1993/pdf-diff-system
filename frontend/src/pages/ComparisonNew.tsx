@@ -1,21 +1,27 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useMutation } from "@tanstack/react-query";
-import { Upload, FileText, X, Settings, AlertTriangle, ArrowLeftRight } from "lucide-react";
+import {
+  Upload, FileText, X, Settings, AlertTriangle, ArrowLeftRight, Layers, Plus, Trash2,
+} from "lucide-react";
 import { toast } from "sonner";
-import { createComparison } from "@/api/endpoints";
+import { createComparison, createBatch } from "@/api/endpoints";
 import { errMsg } from "@/api/client";
 import { fmtBytes } from "@/lib/utils";
 
+type Mode = "single" | "batch";
+
 export default function ComparisonNew() {
   const nav = useNavigate();
+  const [mode, setMode] = useState<Mode>("single");
   const [title, setTitle] = useState("");
   const [orig, setOrig] = useState<File | null>(null);
   const [scan, setScan] = useState<File | null>(null);
+  const [scans, setScans] = useState<File[]>([]);
   const [dpi, setDpi] = useState(200);
   const [showAdvanced, setShowAdvanced] = useState(false);
 
-  const m = useMutation({
+  const singleMut = useMutation({
     mutationFn: createComparison,
     onSuccess: (r) => {
       toast.success(`已创建任务 #${r.id}`);
@@ -24,27 +30,78 @@ export default function ComparisonNew() {
     onError: (e) => toast.error(errMsg(e)),
   });
 
+  const batchMut = useMutation({
+    mutationFn: createBatch,
+    onSuccess: (r) => {
+      toast.success(`已创建批量任务 #${r.id}，共 ${r.total} 个子对比`);
+      nav(`/batches/${r.id}`);
+    },
+    onError: (e) => toast.error(errMsg(e)),
+  });
+
   function submit() {
-    if (!orig || !scan) {
-      toast.error("请上传两份 PDF");
-      return;
+    if (mode === "single") {
+      if (!orig || !scan) {
+        toast.error("请上传两份 PDF");
+        return;
+      }
+      singleMut.mutate({
+        title: title || `${orig.name} vs ${scan.name}`,
+        orig, scan, dpi,
+      });
+    } else {
+      if (!orig) {
+        toast.error("请上传原件 PDF");
+        return;
+      }
+      if (scans.length === 0) {
+        toast.error("请上传至少 1 份扫描件");
+        return;
+      }
+      batchMut.mutate({
+        title: title || `${orig.name} → ${scans.length} 份扫描件`,
+        orig, scans, dpi,
+      });
     }
-    m.mutate({
-      title: title || `${orig.name} vs ${scan.name}`,
-      orig, scan, dpi,
-    });
   }
+
+  const pending = singleMut.isPending || batchMut.isPending;
 
   return (
     <div className="max-w-3xl mx-auto p-6">
       <h1 className="text-xl font-semibold mb-1">新建对比任务</h1>
-      <p className="text-sm text-gray-500 mb-6">上传一份原件（电子矢量 PDF）和一份扫描件（盖章扫描 PDF），系统会自动 OCR 和对比。</p>
+      <p className="text-sm text-gray-500 mb-4">
+        上传原件（电子矢量 PDF）与扫描件（盖章扫描 PDF），系统自动 OCR 与对比。
+      </p>
+
+      {/* 模式切换 */}
+      <div className="card p-1 mb-4 inline-flex">
+        <button
+          onClick={() => setMode("single")}
+          className={`px-4 py-2 rounded-md text-sm font-medium transition ${
+            mode === "single" ? "bg-blue-600 text-white" : "text-gray-600 hover:bg-gray-100"
+          }`}
+        >
+          <FileText className="w-3.5 h-3.5 inline-block mr-1" /> 单对比
+        </button>
+        <button
+          onClick={() => setMode("batch")}
+          className={`px-4 py-2 rounded-md text-sm font-medium transition ${
+            mode === "batch" ? "bg-blue-600 text-white" : "text-gray-600 hover:bg-gray-100"
+          }`}
+        >
+          <Layers className="w-3.5 h-3.5 inline-block mr-1" /> 批量对比
+          <span className="ml-1 text-xs opacity-70">1 原件 × N 扫描件</span>
+        </button>
+      </div>
 
       <div className="card p-3 mb-4 bg-amber-50 border-amber-200 flex items-start gap-2 text-sm">
         <AlertTriangle className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
         <div className="text-amber-900">
           <strong>注意上传位置：</strong>
-          <span className="ml-1">「原件」放<strong>电子矢量版</strong>（文字可复制选中的 PDF）；「扫描件」放<strong>盖章扫描版</strong>（图像 PDF）。位置放反会导致结果完全异常。</span>
+          「原件」放<strong>电子矢量版</strong>（文字可复制选中的 PDF）；
+          「扫描件」放<strong>盖章扫描版</strong>（图像 PDF）。
+          位置放反会导致结果完全异常。
         </div>
       </div>
 
@@ -53,26 +110,35 @@ export default function ComparisonNew() {
           <label className="label">任务标题（可选）</label>
           <input
             className="input"
-            placeholder="例如：江苏中广核 V2.0 采购合同 - 2026"
+            placeholder={mode === "single"
+              ? "例如：江苏中广核 V2.0 采购合同 - 2026"
+              : "例如：服务器采购合同 - 6 家盖章版"}
             value={title}
             onChange={(e) => setTitle(e.target.value)}
           />
         </div>
 
-        <div className="grid grid-cols-[1fr_auto_1fr] gap-3 items-stretch">
-          <DropZone label="① 原件 PDF（电子版）" hint="文字可选可复制" file={orig} onChange={setOrig} />
-          <div className="flex items-center">
-            <button
-              onClick={() => { const a = orig; setOrig(scan); setScan(a); }}
-              className="btn-secondary !p-2"
-              title="交换两侧文件"
-              disabled={!orig && !scan}
-            >
-              <ArrowLeftRight className="w-4 h-4" />
-            </button>
+        {mode === "single" ? (
+          <div className="grid grid-cols-[1fr_auto_1fr] gap-3 items-stretch">
+            <DropZone label="① 原件 PDF（电子版）" hint="文字可选可复制" file={orig} onChange={setOrig} />
+            <div className="flex items-center">
+              <button
+                onClick={() => { const a = orig; setOrig(scan); setScan(a); }}
+                className="btn-secondary !p-2"
+                title="交换两侧文件"
+                disabled={!orig && !scan}
+              >
+                <ArrowLeftRight className="w-4 h-4" />
+              </button>
+            </div>
+            <DropZone label="② 扫描件 PDF（盖章版）" hint="盖章后扫描的图像 PDF" file={scan} onChange={setScan} />
           </div>
-          <DropZone label="② 扫描件 PDF（盖章版）" hint="盖章后扫描的图像 PDF" file={scan} onChange={setScan} />
-        </div>
+        ) : (
+          <>
+            <DropZone label="① 原件 PDF（电子版，1 份）" hint="所有扫描件将与该原件对比" file={orig} onChange={setOrig} />
+            <MultiDropZone label="② 扫描件 PDF（盖章版，多份）" files={scans} onChange={setScans} />
+          </>
+        )}
 
         <div className="card p-4">
           <button onClick={() => setShowAdvanced((v) => !v)} className="text-sm text-gray-600 inline-flex items-center gap-1">
@@ -97,9 +163,9 @@ export default function ComparisonNew() {
 
         <div className="flex gap-2 justify-end">
           <button onClick={() => nav(-1)} className="btn-secondary">取消</button>
-          <button onClick={submit} className="btn-primary" disabled={m.isPending || !orig || !scan}>
+          <button onClick={submit} className="btn-primary" disabled={pending}>
             <Upload className="w-3.5 h-3.5" />
-            {m.isPending ? "上传中..." : "开始对比"}
+            {pending ? "上传中..." : (mode === "single" ? "开始对比" : `开始批量对比（${scans.length} 份）`)}
           </button>
         </div>
       </div>
@@ -109,12 +175,7 @@ export default function ComparisonNew() {
 
 function DropZone({
   label, hint, file, onChange,
-}: {
-  label: string;
-  hint: string;
-  file: File | null;
-  onChange: (f: File | null) => void;
-}) {
+}: { label: string; hint: string; file: File | null; onChange: (f: File | null) => void }) {
   const [drag, setDrag] = useState(false);
 
   function onDrop(e: React.DragEvent) {
@@ -156,6 +217,77 @@ function DropZone({
             onChange={(e) => onChange(e.target.files?.[0] ?? null)}
           />
         </label>
+      )}
+    </div>
+  );
+}
+
+function MultiDropZone({
+  label, files, onChange,
+}: { label: string; files: File[]; onChange: (f: File[]) => void }) {
+  const [drag, setDrag] = useState(false);
+
+  function addFiles(newFiles: FileList | File[] | null) {
+    if (!newFiles) return;
+    const arr = Array.from(newFiles).filter((f) => f.type === "application/pdf");
+    if (arr.length === 0) {
+      toast.error("请上传 PDF 文件");
+      return;
+    }
+    // 去重（按 name + size）
+    const map = new Map(files.map((f) => [`${f.name}_${f.size}`, f]));
+    for (const f of arr) map.set(`${f.name}_${f.size}`, f);
+    onChange([...map.values()]);
+  }
+
+  function onDrop(e: React.DragEvent) {
+    e.preventDefault();
+    setDrag(false);
+    addFiles(e.dataTransfer.files);
+  }
+
+  function removeAt(idx: number) {
+    onChange(files.filter((_, i) => i !== idx));
+  }
+
+  return (
+    <div className="card p-4">
+      <label className="label flex items-center justify-between">
+        <span>{label}</span>
+        {files.length > 0 && <span className="text-xs text-gray-500">{files.length} 份</span>}
+      </label>
+
+      <label
+        className={`block border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-colors ${
+          drag ? "border-blue-500 bg-blue-50" : "border-gray-300 bg-gray-50 hover:bg-gray-100"
+        }`}
+        onDragOver={(e) => { e.preventDefault(); setDrag(true); }}
+        onDragLeave={() => setDrag(false)}
+        onDrop={onDrop}
+      >
+        <Plus className="w-6 h-6 mx-auto text-gray-400 mb-1" />
+        <div className="text-sm text-gray-600">拖拽或点击添加多份 PDF</div>
+        <div className="text-xs text-gray-400">支持多选；单次最多 50 份</div>
+        <input
+          type="file" multiple className="hidden" accept="application/pdf"
+          onChange={(e) => { addFiles(e.target.files); e.target.value = ""; }}
+        />
+      </label>
+
+      {files.length > 0 && (
+        <ul className="mt-3 space-y-1">
+          {files.map((f, i) => (
+            <li key={`${f.name}_${f.size}_${i}`}
+                className="flex items-center gap-2 px-2 py-1.5 rounded border border-gray-200 bg-gray-50 text-sm">
+              <FileText className="w-4 h-4 text-blue-600 shrink-0" />
+              <span className="flex-1 truncate">{f.name}</span>
+              <span className="text-xs text-gray-500">{fmtBytes(f.size)}</span>
+              <button onClick={() => removeAt(i)} className="text-gray-400 hover:text-red-600">
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
+            </li>
+          ))}
+        </ul>
       )}
     </div>
   );

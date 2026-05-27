@@ -177,13 +177,13 @@ async function _doDownload(url: string, fallbackName: string) {
     if (m2) filename = m2[1];
   }
   const blob = new Blob([res.data]);
-  const url = URL.createObjectURL(blob);
+  const blobUrl = URL.createObjectURL(blob);
   const a = document.createElement("a");
-  a.href = url;
+  a.href = blobUrl;
   a.download = filename;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
   return filename;
 }

@@ -4,6 +4,8 @@ import Login from "@/pages/Login";
 import ComparisonList from "@/pages/ComparisonList";
 import ComparisonNew from "@/pages/ComparisonNew";
 import ComparisonDetail from "@/pages/ComparisonDetail";
+import BatchList from "@/pages/BatchList";
+import BatchDetail from "@/pages/BatchDetail";
 import AppShell from "@/components/AppShell";
 import RequireAuth from "@/components/RequireAuth";
 
@@ -28,6 +30,8 @@ export default function App() {
               <Route path="/" element={<ComparisonList />} />
               <Route path="/new" element={<ComparisonNew />} />
               <Route path="/comparisons/:id" element={<ComparisonDetail />} />
+              <Route path="/batches" element={<BatchList />} />
+              <Route path="/batches/:id" element={<BatchDetail />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Route>
           </Route>
