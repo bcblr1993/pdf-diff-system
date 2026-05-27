@@ -29,6 +29,11 @@ class Comparison(Base):
     title: Mapped[str] = mapped_column(String(255), default="", nullable=False)
     created_by: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
 
+    # 可选：归属哪个批量任务（一对多）
+    batch_id: Mapped[int | None] = mapped_column(
+        ForeignKey("batch_jobs.id", ondelete="CASCADE"), index=True
+    )
+
     orig_file_id: Mapped[int] = mapped_column(ForeignKey("files.id", ondelete="RESTRICT"), nullable=False)
     scan_file_id: Mapped[int] = mapped_column(ForeignKey("files.id", ondelete="RESTRICT"), nullable=False)
 
@@ -65,3 +70,4 @@ class Comparison(Base):
     orig_file = relationship("File", foreign_keys=[orig_file_id], lazy="joined")
     scan_file = relationship("File", foreign_keys=[scan_file_id], lazy="joined")
     diffs = relationship("Diff", back_populates="comparison", cascade="all, delete-orphan", lazy="select")
+    batch = relationship("BatchJob", back_populates="comparisons", lazy="select")
