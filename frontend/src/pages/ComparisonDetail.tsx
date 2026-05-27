@@ -2,9 +2,9 @@ import { useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { CheckCircle2, ArrowLeft, FileText, AlertTriangle } from "lucide-react";
+import { CheckCircle2, ArrowLeft, FileText, AlertTriangle, Download, FileSpreadsheet, FileCode2, FileType2 } from "lucide-react";
 import {
-  getComparison, listDiffs, completeReview, pdfUrl,
+  getComparison, listDiffs, completeReview, downloadExport,
 } from "@/api/endpoints";
 import { errMsg } from "@/api/client";
 import { useAuthStore } from "@/stores/auth";
@@ -181,6 +181,7 @@ function Toolbar({ cmp, onBack, onComplete }: { cmp: any; onBack: () => void; on
           <Stat label="章遮挡" value={s.stamp_covered} color="bg-gray-200 text-gray-700" />
         </div>
       )}
+      {cmp.status === "done" && <ExportMenu cid={cmp.id} />}
       {cmp.status === "done" && cmp.review_status !== "completed" && onComplete && (
         <button onClick={onComplete} className="btn-primary !py-1.5">
           <CheckCircle2 className="w-3.5 h-3.5" /> 完成审核
@@ -188,6 +189,60 @@ function Toolbar({ cmp, onBack, onComplete }: { cmp: any; onBack: () => void; on
       )}
       {cmp.review_status === "completed" && (
         <span className="badge bg-green-600 text-white">✓ 已审核</span>
+      )}
+    </div>
+  );
+}
+
+function ExportMenu({ cid }: { cid: number }) {
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState<string | null>(null);
+
+  async function go(format: "xlsx" | "html" | "pdf") {
+    setLoading(format);
+    setOpen(false);
+    try {
+      const fname = await downloadExport(cid, format);
+      toast.success(`已导出 ${fname}`);
+    } catch (e) {
+      const err = e as { response?: { data?: Blob } };
+      if (err?.response?.data instanceof Blob) {
+        const text = await err.response.data.text();
+        try { toast.error(JSON.parse(text).detail || "导出失败"); }
+        catch { toast.error("导出失败"); }
+      } else {
+        toast.error("导出失败");
+      }
+    } finally {
+      setLoading(null);
+    }
+  }
+
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="btn-secondary !py-1.5"
+        disabled={loading !== null}
+      >
+        <Download className="w-3.5 h-3.5" />
+        {loading ? `导出${loading.toUpperCase()}…` : "导出报告"}
+      </button>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
+          <div className="absolute right-0 top-full mt-1 w-44 card !rounded-md py-1 z-20 text-sm shadow-md">
+            <button onClick={() => go("xlsx")} className="w-full flex items-center gap-2 px-3 py-2 hover:bg-gray-50 text-left">
+              <FileSpreadsheet className="w-4 h-4 text-green-600" /> Excel 报告
+            </button>
+            <button onClick={() => go("html")} className="w-full flex items-center gap-2 px-3 py-2 hover:bg-gray-50 text-left">
+              <FileCode2 className="w-4 h-4 text-blue-600" /> HTML 快照
+            </button>
+            <button onClick={() => go("pdf")} className="w-full flex items-center gap-2 px-3 py-2 hover:bg-gray-50 text-left">
+              <FileType2 className="w-4 h-4 text-red-600" /> PDF 报告
+            </button>
+          </div>
+        </>
       )}
     </div>
   );

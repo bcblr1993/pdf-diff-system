@@ -105,3 +105,36 @@ export function pdfUrl(cid: number, side: "orig" | "scan") {
   const token = (window as any).__token || "";
   return `/api/comparisons/${cid}/${side}.pdf${token ? `?_=${Date.now()}` : ""}`;
 }
+
+// ─── 导出 ────────────────────────────────────────────
+export type ExportFormat = "xlsx" | "html" | "pdf";
+
+export async function downloadExport(cid: number, format: ExportFormat, opts: {
+  include_noise?: boolean;
+} = {}) {
+  const params = format === "html" && opts.include_noise ? "?include_noise=true" : "";
+  const res = await api.get(`/api/comparisons/${cid}/export.${format}${params}`, {
+    responseType: "blob",
+    timeout: 120_000,
+  });
+  // 从 Content-Disposition 提取文件名
+  const disp: string = res.headers["content-disposition"] || "";
+  let filename = `comparison-${cid}.${format}`;
+  const m = disp.match(/filename\*=UTF-8''([^;]+)/);
+  if (m) {
+    try { filename = decodeURIComponent(m[1]); } catch { /* ignore */ }
+  } else {
+    const m2 = disp.match(/filename="?([^";]+)"?/);
+    if (m2) filename = m2[1];
+  }
+  const blob = new Blob([res.data]);
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  return filename;
+}
