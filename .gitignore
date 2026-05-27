@@ -49,3 +49,6 @@ samples/*.pdf
 
 # ───────── Docker 构建产物 ─────────
 *.tar
+
+# Pipeline 临时备份
+backend/pipeline.zip
