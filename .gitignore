@@ -1,0 +1,51 @@
+# ───────── Python ─────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+.venv/
+env/
+ENV/
+*.egg-info/
+.eggs/
+build/
+dist/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# ───────── Node.js / 前端 ─────────
+node_modules/
+frontend/dist/
+frontend/.vite/
+*.tsbuildinfo
+.eslintcache
+
+# ───────── 编辑器 / IDE ─────────
+.idea/
+.vscode/
+*.iml
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# ───────── 项目运行时数据 ─────────
+storage/
+cache/
+output/
+*.log
+*.pid
+.env
+.env.local
+.env.*.local
+
+# ───────── 样本 PDF 不入库（隐私 + 文件大）─────────
+samples/*.pdf
+
+# ───────── Docker 构建产物 ─────────
+*.tar

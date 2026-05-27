@@ -1,0 +1,12 @@
+把待对比的 PDF 放到本目录，不会被 git 跟踪。
+
+样本用例：
+- 原件 PDF（电子矢量版，文字可复制）
+- 扫描件 PDF（盖章后扫描的图像版）
+
+跑算法：
+```bash
+docker compose exec api python -m app.cli \
+  --orig samples/original.pdf \
+  --scan samples/scanned.pdf
+```
