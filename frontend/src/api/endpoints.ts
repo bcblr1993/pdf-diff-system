@@ -1,5 +1,8 @@
 import { api } from "./client";
 import type {
+  BatchBrief,
+  BatchDetail,
+  BatchStatus,
   ComparisonBrief,
   ComparisonDetail,
   Diff,
@@ -106,6 +109,44 @@ export function pdfUrl(cid: number, side: "orig" | "scan") {
   return `/api/comparisons/${cid}/${side}.pdf${token ? `?_=${Date.now()}` : ""}`;
 }
 
+// ─── 批量任务 ────────────────────────────────────────
+export async function listBatches(params: {
+  page?: number;
+  page_size?: number;
+  status?: BatchStatus;
+  mine_only?: boolean;
+}) {
+  const { data } = await api.get<Page<BatchBrief>>("/api/batches", { params });
+  return data;
+}
+
+export async function getBatch(id: number) {
+  const { data } = await api.get<BatchDetail>(`/api/batches/${id}`);
+  return data;
+}
+
+export async function createBatch(args: {
+  title: string;
+  orig: File;
+  scans: File[];
+  dpi?: number;
+}) {
+  const fd = new FormData();
+  fd.append("title", args.title);
+  fd.append("orig", args.orig);
+  for (const s of args.scans) fd.append("scans", s);
+  if (args.dpi) fd.append("dpi", String(args.dpi));
+  const { data } = await api.post<{ id: number; total: number; comparison_ids: number[] }>(
+    "/api/batches", fd,
+    { headers: { "Content-Type": "multipart/form-data" }, timeout: 10 * 60_000 }
+  );
+  return data;
+}
+
+export async function deleteBatch(id: number) {
+  await api.delete(`/api/batches/${id}`);
+}
+
 // ─── 导出 ────────────────────────────────────────────
 export type ExportFormat = "xlsx" | "html" | "pdf";
 
@@ -113,13 +154,21 @@ export async function downloadExport(cid: number, format: ExportFormat, opts: {
   include_noise?: boolean;
 } = {}) {
   const params = format === "html" && opts.include_noise ? "?include_noise=true" : "";
-  const res = await api.get(`/api/comparisons/${cid}/export.${format}${params}`, {
+  return _doDownload(`/api/comparisons/${cid}/export.${format}${params}`, `comparison-${cid}.${format}`);
+}
+
+export async function downloadBatchExport(bid: number) {
+  return _doDownload(`/api/batches/${bid}/export.xlsx`, `batch-${bid}.xlsx`);
+}
+
+async function _doDownload(url: string, fallbackName: string) {
+  const res = await api.get(url, {
     responseType: "blob",
     timeout: 120_000,
   });
   // 从 Content-Disposition 提取文件名
   const disp: string = res.headers["content-disposition"] || "";
-  let filename = `comparison-${cid}.${format}`;
+  let filename = fallbackName;
   const m = disp.match(/filename\*=UTF-8''([^;]+)/);
   if (m) {
     try { filename = decodeURIComponent(m[1]); } catch { /* ignore */ }

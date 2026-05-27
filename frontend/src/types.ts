@@ -93,6 +93,26 @@ export interface Page<T> {
   page_size: number;
 }
 
+// ─── 批量任务 ───────────────────────────────────────
+export type BatchStatus = "pending" | "running" | "done" | "partial" | "failed";
+
+export interface BatchBrief {
+  id: number;
+  title: string;
+  created_by: number | null;
+  status: BatchStatus;
+  total: number;
+  completed: number;
+  failed: number;
+  created_at: string;
+  completed_at: string | null;
+}
+
+export interface BatchDetail extends BatchBrief {
+  orig_file: FileBrief;
+  comparisons: ComparisonBrief[];
+}
+
 export interface ProgressEvent {
   phase: string;
   pct: number;
