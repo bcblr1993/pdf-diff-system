@@ -9,6 +9,13 @@ import {
 import { errMsg } from "@/api/client";
 import { useAuthStore } from "@/stores/auth";
 import PdfDocument from "@/components/PdfDocument";
+import DocxViewer from "@/components/DocxViewer";
+
+const DOCX_MIME = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+function isWord(f?: { mime_type?: string; original_name?: string }) {
+  if (!f) return false;
+  return f.mime_type === DOCX_MIME || (f.original_name || "").toLowerCase().endsWith(".docx");
+}
 import DiffSidebar from "@/components/DiffSidebar";
 import ProgressPanel from "@/components/ProgressPanel";
 import { fmtTime, REVIEW_STATUS_LABEL } from "@/lib/utils";
@@ -118,24 +125,32 @@ export default function ComparisonDetail() {
       <div className="flex-1 grid grid-cols-[1fr_400px] overflow-hidden">
         <div className="grid grid-cols-2 overflow-hidden border-r border-gray-200">
           <div className="overflow-y-auto bg-gray-100">
-            <PdfDocument
-              url={origPdfUrl}
-              side="orig"
-              diffs={diffs}
-              activeDiffId={activeDiffId}
-              onSelectDiff={setActiveDiffId}
-              pageScrollAnchor={scrollAnchor}
-            />
+            {isWord(cmp.orig_file) ? (
+              <DocxViewer cid={cid} side="orig" diffs={diffs} activeDiffId={activeDiffId} onDiffClick={(d) => setActiveDiffId(d.id)} />
+            ) : (
+              <PdfDocument
+                url={origPdfUrl}
+                side="orig"
+                diffs={diffs}
+                activeDiffId={activeDiffId}
+                onSelectDiff={setActiveDiffId}
+                pageScrollAnchor={scrollAnchor}
+              />
+            )}
           </div>
           <div className="overflow-y-auto bg-gray-100 border-l border-gray-200">
-            <PdfDocument
-              url={scanPdfUrl}
-              side="scan"
-              diffs={diffs}
-              activeDiffId={activeDiffId}
-              onSelectDiff={setActiveDiffId}
-              pageScrollAnchor={scrollAnchor}
-            />
+            {isWord(cmp.scan_file) ? (
+              <DocxViewer cid={cid} side="scan" diffs={diffs} activeDiffId={activeDiffId} onDiffClick={(d) => setActiveDiffId(d.id)} />
+            ) : (
+              <PdfDocument
+                url={scanPdfUrl}
+                side="scan"
+                diffs={diffs}
+                activeDiffId={activeDiffId}
+                onSelectDiff={setActiveDiffId}
+                pageScrollAnchor={scrollAnchor}
+              />
+            )}
           </div>
         </div>
         <div className="bg-white overflow-hidden">

@@ -182,8 +182,11 @@ function DropZone({
     e.preventDefault();
     setDrag(false);
     const f = e.dataTransfer.files[0];
-    if (f && f.type === "application/pdf") onChange(f);
-    else toast.error("请上传 PDF 文件");
+    if (f && (f.type === "application/pdf" || f.name.toLowerCase().endsWith(".pdf") || f.name.toLowerCase().endsWith(".docx"))) {
+      onChange(f);
+    } else {
+      toast.error("请上传 PDF 或 Word (.docx) 文件");
+    }
   }
 
   return (
@@ -213,7 +216,7 @@ function DropZone({
           <div className="text-sm text-gray-600">拖拽或点击选择 PDF</div>
           <div className="text-xs text-gray-400 mt-1">{hint}</div>
           <input
-            type="file" className="hidden" accept="application/pdf"
+            type="file" className="hidden" accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
             onChange={(e) => onChange(e.target.files?.[0] ?? null)}
           />
         </label>
@@ -229,9 +232,11 @@ function MultiDropZone({
 
   function addFiles(newFiles: FileList | File[] | null) {
     if (!newFiles) return;
-    const arr = Array.from(newFiles).filter((f) => f.type === "application/pdf");
+    const arr = Array.from(newFiles).filter((f) =>
+      f.type === "application/pdf" || /\.(pdf|docx)$/i.test(f.name)
+    );
     if (arr.length === 0) {
-      toast.error("请上传 PDF 文件");
+      toast.error("请上传 PDF 或 Word (.docx) 文件");
       return;
     }
     // 去重（按 name + size）
@@ -269,7 +274,7 @@ function MultiDropZone({
         <div className="text-sm text-gray-600">拖拽或点击添加多份 PDF</div>
         <div className="text-xs text-gray-400">支持多选；单次最多 50 份</div>
         <input
-          type="file" multiple className="hidden" accept="application/pdf"
+          type="file" multiple className="hidden" accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
           onChange={(e) => { addFiles(e.target.files); e.target.value = ""; }}
         />
       </label>
