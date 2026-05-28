@@ -5,6 +5,7 @@ from difflib import SequenceMatcher
 from .stream import PageStream, DocStream, Char
 from .stamp_mask import bbox_in_any
 from .normalize import normalize
+from .key_fields import compare_fields, FieldDiff
 
 
 @dataclass
@@ -469,8 +470,16 @@ def _detect_moves_doc(clusters, orig_doc: DocStream, scan_doc: DocStream,
 def diff_documents(orig_doc: DocStream, scan_doc: DocStream,
                    *,
                    stamp_regions_per_page: dict[int, list[tuple]] | None = None) -> list[DiffItem]:
-    """文档级字符流 diff。跨页对齐，每个 diff 项已带页号路由。"""
+    """文档级字符流 diff。跨页对齐，每个 diff 项已带页号路由。
+
+    v11：在字符流 diff 之前先跑「关键字段抽取与比对」，把合同编号、金额、账号、
+    电话、税号、法人等结构化差异作为高置信度 DiffItem 置顶（severity=critical）。
+    """
     items: list[DiffItem] = []
+
+    # —— v11：关键字段差异（置顶 + critical）——
+    items.extend(_field_level_diffs(orig_doc, scan_doc))
+
     a = orig_doc.norm_text
     b = scan_doc.norm_text
     if not a and not b:
@@ -599,3 +608,81 @@ def _whole_page_diff(ps: PageStream, *, side: str, idx_offset: int) -> list[Diff
             is_footer=is_footer,
         ))
     return items
+
+
+# ─────────────────────── v11：关键字段差异层 ───────────────────────
+
+
+def _field_level_diffs(orig_doc: DocStream, scan_doc: DocStream) -> list[DiffItem]:
+    """跑关键字段比对，转成 DiffItem 列表（全部 critical 置顶）。
+
+    bbox 通过 norm_text 位置映射到 chars[i].bbox 反查。
+    """
+    items: list[DiffItem] = []
+    field_diffs = compare_fields(orig_doc.norm_text, scan_doc.norm_text)
+    for i, fd in enumerate(field_diffs):
+        items.append(_field_diff_to_item(orig_doc, scan_doc, fd, i))
+    return items
+
+
+# 字段差异 kind → 分类
+_FIELD_KIND_CATEGORY = {
+    "changed": "replace",
+    "missing_in_orig": "insert",    # 原件没 / 扫描件有 = 新增
+    "missing_in_scan": "delete",    # 原件有 / 扫描件没 = 删除
+    "added": "insert",
+    "removed": "delete",
+}
+
+
+def _field_diff_to_item(orig_doc: DocStream, scan_doc: DocStream,
+                        fd: FieldDiff, idx: int) -> DiffItem:
+    """单条字段差异 → DiffItem。位置 → bbox/page 反查。"""
+
+    def _locate(doc: DocStream, norm_pos: int, length: int) -> tuple[int, tuple | None]:
+        """norm_text 位置 → (page, bbox)。"""
+        if norm_pos < 0 or norm_pos >= len(doc.norm_to_orig):
+            return -1, None
+        start = doc.norm_to_orig[norm_pos]
+        end_norm = min(norm_pos + length - 1, len(doc.norm_to_orig) - 1)
+        end = doc.norm_to_orig[end_norm] + 1
+        chars = doc.chars[start:end]
+        if not chars:
+            return -1, None
+        page = chars[0].page
+        xs0 = [c.bbox[0] for c in chars]
+        ys0 = [c.bbox[1] for c in chars]
+        xs1 = [c.bbox[2] for c in chars]
+        ys1 = [c.bbox[3] for c in chars]
+        bbox = (min(xs0), min(ys0), max(xs1), max(ys1))
+        return page, bbox
+
+    o_page, o_bbox = (-1, None)
+    s_page, s_bbox = (-1, None)
+    if fd.orig_pos >= 0:
+        o_page, o_bbox = _locate(orig_doc, fd.orig_pos, len(fd.orig_value))
+    if fd.scan_pos >= 0:
+        s_page, s_bbox = _locate(scan_doc, fd.scan_pos, len(fd.scan_value))
+
+    category = _FIELD_KIND_CATEGORY.get(fd.kind, "replace")
+    label_prefix = {
+        "changed": "已变更",
+        "missing_in_orig": "原件缺失",
+        "missing_in_scan": "扫描件缺失",
+        "added": "新增",
+        "removed": "删除",
+    }.get(fd.kind, "字段差异")
+
+    return DiffItem(
+        id=f"f{idx}",
+        category=category,
+        severity="critical",
+        orig_page=o_page,
+        scan_page=s_page,
+        orig_text=fd.orig_value,
+        scan_text=fd.scan_value,
+        orig_bbox=o_bbox,
+        scan_bbox=s_bbox,
+        context=f"【关键字段·{fd.label}·{label_prefix}】",
+        is_footer=False,
+    )
