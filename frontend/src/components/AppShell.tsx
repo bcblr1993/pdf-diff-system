@@ -1,9 +1,8 @@
 import { Link, Outlet, useNavigate, useLocation } from "react-router-dom";
 import { Toaster } from "sonner";
-import { LogOut, Plus, Layers, Key, Moon, Sun, ChevronDown, Palette as PaletteIcon, Check } from "lucide-react";
+import { LogOut, Plus, Layers, Key, ChevronDown, Palette as PaletteIcon, Check } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { useAuthStore } from "@/stores/auth";
-import { useThemeStore } from "@/stores/theme";
 import { usePaletteStore, PALETTE_META, type Palette } from "@/stores/palette";
 import { LogoMark, Wordmark } from "@/components/Logo";
 
@@ -88,7 +87,6 @@ function Header({ isDetail, user, onLogout }: { isDetail: boolean; user: any; on
           {/* 右侧 */}
           <div className="flex items-center gap-1">
             <PaletteMenu />
-            <ThemeToggle />
             {user && <UserMenu user={user} onLogout={onLogout} />}
           </div>
         </div>
@@ -116,21 +114,6 @@ function NavLink({
         }}
       />
     </Link>
-  );
-}
-
-function ThemeToggle() {
-  const theme = useThemeStore((s) => s.theme);
-  const setTheme = useThemeStore((s) => s.setTheme);
-  return (
-    <button
-      onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-      className="btn btn-ghost !h-9 !w-9 !p-0"
-      title={theme === "dark" ? "切换浅色" : "切换深色"}
-      aria-label="切换主题"
-    >
-      {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-    </button>
   );
 }
 
