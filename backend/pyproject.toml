@@ -28,6 +28,7 @@ dependencies = [
     "structlog==24.4.0",
     # Pipeline 依赖（继承 MVP）
     "pymupdf==1.26.5",
+    "python-docx==1.1.2",
     "rapidocr-onnxruntime==1.4.4",
     "opencv-python-headless==4.13.0.92",
     "pillow==11.3.0",
