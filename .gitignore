@@ -52,3 +52,6 @@ samples/*.pdf
 
 # Pipeline 临时备份
 backend/pipeline.zip
+samples/*.docx
+tmp/
+backups/

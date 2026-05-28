@@ -1,0 +1,94 @@
+# 生产部署叠加文件。
+# 用法：docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+#
+# 与 base 的差异：
+#   - 去掉 ./backend:/app 源码挂载（用镜像内代码）
+#   - api 关闭 --reload（生产用稳定 worker 进程）
+#   - 端口不直接对外，全部由 frontend 容器（nginx）统一入口
+#   - 加资源限制 + 日志轮转
+#   - postgres / redis 不再暴露宿主端口（仅容器内互通）
+
+services:
+  postgres:
+    restart: always
+    ports: !reset []
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+          cpus: "1.0"
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  redis:
+    restart: always
+    ports: !reset []
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory", "256mb", "--maxmemory-policy", "allkeys-lru"]
+    deploy:
+      resources:
+        limits:
+          memory: 384m
+          cpus: "0.5"
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  api:
+    restart: always
+    volumes: !reset
+      - storage:/data/storage
+      - cache:/data/cache
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000",
+              "--workers", "${API_WORKERS:-2}", "--proxy-headers"]
+    ports: !reset []  # 不再直接暴露，走 frontend nginx
+    deploy:
+      resources:
+        limits:
+          memory: 2g
+          cpus: "2.0"
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "10"
+
+  worker:
+    restart: always
+    volumes: !reset
+      - storage:/data/storage
+      - cache:/data/cache
+    deploy:
+      resources:
+        limits:
+          memory: 4g
+          cpus: "2.0"
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "10"
+
+  frontend:
+    restart: always
+    # 生产可以直接 443 + cert 挂载（按需打开下面注释）
+    # ports:
+    #   - "443:443"
+    # volumes:
+    #   - ./deploy/certs:/etc/nginx/certs:ro
+    # environment:
+    #   ENABLE_HTTPS: "true"
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+          cpus: "0.5"
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
