@@ -23,15 +23,41 @@ def _hash_stream(stream) -> tuple[str, int]:
     return h.hexdigest(), size
 
 
-def _storage_path(sha1: str) -> Path:
-    # 用前两位做二级目录，避免单目录文件过多
-    return Path(settings.storage_dir) / "pdfs" / sha1[:2] / f"{sha1}.pdf"
+MIME_PDF = "application/pdf"
+MIME_DOCX = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+
+SUPPORTED_MIMES = {MIME_PDF, MIME_DOCX}
 
 
-def save_upload(db: Session, upload, *, mime: str = "application/pdf") -> File:
+def _ext_for_mime(mime: str) -> str:
+    return ".pdf" if mime == MIME_PDF else ".docx"
+
+
+def _detect_mime(filename: str, upload_content_type: str | None) -> str:
+    """根据扩展名 + Content-Type 推断 mime。"""
+    name = (filename or "").lower()
+    if name.endswith(".docx"):
+        return MIME_DOCX
+    if name.endswith(".pdf"):
+        return MIME_PDF
+    # 退回 Content-Type
+    if upload_content_type and upload_content_type in SUPPORTED_MIMES:
+        return upload_content_type
+    return MIME_PDF  # 默认按 PDF 处理
+
+
+def _storage_path(sha1: str, mime: str) -> Path:
+    ext = _ext_for_mime(mime)
+    # 不同类型分目录存
+    sub = "pdfs" if mime == MIME_PDF else "docx"
+    return Path(settings.storage_dir) / sub / sha1[:2] / f"{sha1}{ext}"
+
+
+def save_upload(db: Session, upload, *, mime: str | None = None) -> File:
     """保存上传文件，去重存储。upload 是 FastAPI 的 UploadFile（同步版本读 .file）。
 
     返回 File 记录。同 sha1 已存在则复用。
+    自动按文件名 + Content-Type 识别 PDF / docx。
     """
     upload.file.seek(0)
     sha1, size = _hash_stream(upload.file)
@@ -40,20 +66,34 @@ def save_upload(db: Session, upload, *, mime: str = "application/pdf") -> File:
     if existing:
         return existing
 
-    dest = _storage_path(sha1)
+    # 识别 mime
+    if mime is None:
+        mime = _detect_mime(upload.filename or "", getattr(upload, "content_type", None))
+
+    dest = _storage_path(sha1, mime)
     dest.parent.mkdir(parents=True, exist_ok=True)
     upload.file.seek(0)
     with open(dest, "wb") as f:
         shutil.copyfileobj(upload.file, f)
 
-    # 算页数（PDF）
+    # 算页数：PDF 用 fitz，Word 不算（占位 None）
     page_count = None
-    try:
-        import fitz
-        with fitz.open(dest) as doc:
-            page_count = len(doc)
-    except Exception:
-        pass
+    if mime == MIME_PDF:
+        try:
+            import fitz
+            with fitz.open(dest) as doc:
+                page_count = len(doc)
+        except Exception:
+            pass
+    elif mime == MIME_DOCX:
+        # Word 没有"页"概念，用段落数粗略代替
+        try:
+            from pipeline.word import extract_docx
+            pages = extract_docx(str(dest))
+            if pages:
+                page_count = len(pages[0].lines)  # 借用 page_count 字段存"段落数"
+        except Exception:
+            pass
 
     rec = File(
         sha1=sha1,
@@ -66,6 +106,13 @@ def save_upload(db: Session, upload, *, mime: str = "application/pdf") -> File:
     db.add(rec)
     db.flush()
     return rec
+
+
+def is_word(file: File) -> bool:
+    return file.mime_type == MIME_DOCX
+
+def is_pdf(file: File) -> bool:
+    return file.mime_type == MIME_PDF
 
 
 def open_file_path(file: File) -> Path:

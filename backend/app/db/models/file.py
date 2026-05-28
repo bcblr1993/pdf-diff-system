@@ -13,7 +13,7 @@ class File(Base):
     sha1: Mapped[str] = mapped_column(String(40), unique=True, index=True, nullable=False)
     path: Mapped[str] = mapped_column(String(512), nullable=False)
     original_name: Mapped[str] = mapped_column(String(255), default="", nullable=False)
-    mime_type: Mapped[str] = mapped_column(String(64), default="application/pdf", nullable=False)
+    mime_type: Mapped[str] = mapped_column(String(128), default="application/pdf", nullable=False)
     size_bytes: Mapped[int] = mapped_column(BigInteger, nullable=False)
     page_count: Mapped[int | None] = mapped_column(Integer)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

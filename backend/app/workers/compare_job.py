@@ -46,57 +46,74 @@ def run_comparison(comparison_id: int) -> dict:
         cmp.progress_pct = 0
         orig_path = cmp.orig_file.path
         scan_path = cmp.scan_file.path
+        orig_mime = cmp.orig_file.mime_type
+        scan_mime = cmp.scan_file.mime_type
         dpi = (cmp.settings_json or {}).get("dpi", settings.default_dpi)
         db.commit()
+
+    DOCX = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
 
     try:
         # 导入 pipeline（worker 启动时延迟加载，避免 import 重量级模型阻塞 web）
         from pipeline.extract import extract_pdf_text
-        from pipeline.ocr import ocr_pdf
-        from pipeline.stamp_mask import detect_red_stamps
         from pipeline.stream import (
             build_stream_from_orig, build_stream_from_scan, build_doc_stream
         )
         from pipeline.diff import diff_documents
-        from pipeline import cache as ocrcache
-        from copy import deepcopy
 
-        # 1) 抽取原件文字
-        _update_progress(comparison_id, "extracting", 5, "抽取原件矢量文字")
-        orig_pages = extract_pdf_text(orig_path)
-        log.info("原件抽取完成", pages=len(orig_pages))
-
-        # 2) OCR 扫描件（带缓存）
-        _update_progress(comparison_id, "ocr", 10, "OCR 扫描件中（首次较慢）")
-        cache_dir = settings.cache_dir
-        os.makedirs(cache_dir, exist_ok=True)
-        fh = ocrcache.file_hash(scan_path)
-        ocr_key = f"scan_{fh}_dpi{dpi}"
-        cached = ocrcache.load(cache_dir, ocr_key)
-        if cached is not None:
-            scan_pages, stamp_regions_per_page = cached
-            log.info("OCR 缓存命中", key=ocr_key)
-            _update_progress(comparison_id, "ocr", 60, "OCR 缓存命中")
+        # 1) 抽取原件文字（PDF 走 PyMuPDF，docx 走 python-docx）
+        _update_progress(comparison_id, "extracting", 5, "抽取原件文本")
+        if orig_mime == DOCX:
+            from pipeline.word import extract_docx
+            orig_pages = extract_docx(orig_path)
+            log.info("原件 Word 抽取完成", lines=len(orig_pages[0].lines))
         else:
-            scan_pages = ocr_pdf(scan_path, dpi=dpi)
-            _update_progress(comparison_id, "stamp", 60, "检测红章")
-            stamp_regions_per_page: dict[int, list] = {}
-            for sp in scan_pages:
-                boxes_px = detect_red_stamps(sp.image) if sp.image is not None else []
-                scale = sp.img_width / sp.width
-                stamp_regions_per_page[sp.page] = [
-                    (b[0] / scale, b[1] / scale, b[2] / scale, b[3] / scale) for b in boxes_px
-                ]
-            # 缓存（去掉 image 节省空间）
-            scan_pages_compact = []
-            for sp in scan_pages:
-                sp2 = deepcopy(sp)
-                sp2.image = None
-                scan_pages_compact.append(sp2)
-            ocrcache.save(cache_dir, ocr_key, (scan_pages_compact, stamp_regions_per_page))
+            orig_pages = extract_pdf_text(orig_path)
+            log.info("原件 PDF 抽取完成", pages=len(orig_pages))
+
+        # 2) 处理扫描件侧：docx 直抽，PDF 走 OCR
+        stamp_regions_per_page: dict[int, list] = {}
+        if scan_mime == DOCX:
+            _update_progress(comparison_id, "extracting", 60, "抽取对方 Word 文本")
+            from pipeline.word import extract_docx
+            scan_pages = extract_docx(scan_path)
+            log.info("扫描件 Word 抽取完成", lines=len(scan_pages[0].lines))
+        else:
+            from pipeline.ocr import ocr_pdf
+            from pipeline.stamp_mask import detect_red_stamps
+            from pipeline import cache as ocrcache
+            from copy import deepcopy
+
+            _update_progress(comparison_id, "ocr", 10, "OCR 扫描件中（首次较慢）")
+            cache_dir = settings.cache_dir
+            os.makedirs(cache_dir, exist_ok=True)
+            fh = ocrcache.file_hash(scan_path)
+            ocr_key = f"scan_{fh}_dpi{dpi}"
+            cached = ocrcache.load(cache_dir, ocr_key)
+            if cached is not None:
+                scan_pages, stamp_regions_per_page = cached
+                log.info("OCR 缓存命中", key=ocr_key)
+                _update_progress(comparison_id, "ocr", 60, "OCR 缓存命中")
+            else:
+                scan_pages = ocr_pdf(scan_path, dpi=dpi)
+                _update_progress(comparison_id, "stamp", 60, "检测红章")
+                for sp in scan_pages:
+                    boxes_px = detect_red_stamps(sp.image) if sp.image is not None else []
+                    scale = sp.img_width / sp.width
+                    stamp_regions_per_page[sp.page] = [
+                        (b[0] / scale, b[1] / scale, b[2] / scale, b[3] / scale) for b in boxes_px
+                    ]
+                # 缓存（去掉 image 节省空间）
+                scan_pages_compact = []
+                for sp in scan_pages:
+                    sp2 = deepcopy(sp)
+                    sp2.image = None
+                    scan_pages_compact.append(sp2)
+                ocrcache.save(cache_dir, ocr_key, (scan_pages_compact, stamp_regions_per_page))
 
         # 3) 字符流 + diff
         _update_progress(comparison_id, "diffing", 75, "字符流对比中")
+        # Word 和 PDF 共用 stream 接口：WordPage 兼容 PdfPage 的字段（lines/spans/bbox）
         orig_streams = [build_stream_from_orig(p) for p in orig_pages]
         scan_streams = [build_stream_from_scan(p) for p in scan_pages]
         orig_doc = build_doc_stream(orig_streams, skip_footer=True)

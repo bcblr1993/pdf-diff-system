@@ -39,26 +39,34 @@ def create_comparison(
 ):
     if not orig.filename or not scan.filename:
         raise HTTPException(status_code=400, detail="缺少文件")
-    if orig.content_type not in ("application/pdf", "application/octet-stream"):
-        raise HTTPException(status_code=400, detail=f"原件必须是 PDF，收到 {orig.content_type}")
-    if scan.content_type not in ("application/pdf", "application/octet-stream"):
-        raise HTTPException(status_code=400, detail=f"扫描件必须是 PDF，收到 {scan.content_type}")
+
+    def _check_ext(filename: str, label: str):
+        name = (filename or "").lower()
+        if not (name.endswith(".pdf") or name.endswith(".docx")):
+            raise HTTPException(
+                status_code=400,
+                detail=f"{label}必须是 PDF 或 Word 文档（.pdf / .docx），收到：{filename}"
+            )
+
+    _check_ext(orig.filename, "原件")
+    _check_ext(scan.filename, "扫描件")
 
     orig_f = file_storage.save_upload(db, orig)
     scan_f = file_storage.save_upload(db, scan)
 
-    # 防误传检测：原件应为文字 PDF，扫描件应为图像 PDF
-    orig_chars = file_storage.probe_pdf_text(orig_f.path)
-    scan_chars = file_storage.probe_pdf_text(scan_f.path)
-    if orig_chars < 50 and scan_chars > 500:
-        raise HTTPException(
-            status_code=400,
-            detail=(
-                f"两份 PDF 似乎放反了：原件位置上传的是图像 PDF（前 3 页仅 {orig_chars} 字符），"
-                f"扫描件位置上传的是文字 PDF（前 3 页 {scan_chars} 字符）。"
-                "请把电子矢量版（文字可复制）放在「原件」，盖章扫描版放在「扫描件」。"
-            ),
-        )
+    # 防误传检测：仅在两份都是 PDF 时检查（Word 文件直接抽文本无需此检测）
+    if file_storage.is_pdf(orig_f) and file_storage.is_pdf(scan_f):
+        orig_chars = file_storage.probe_pdf_text(orig_f.path)
+        scan_chars = file_storage.probe_pdf_text(scan_f.path)
+        if orig_chars < 50 and scan_chars > 500:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    f"两份 PDF 似乎放反了：原件位置上传的是图像 PDF（前 3 页仅 {orig_chars} 字符），"
+                    f"扫描件位置上传的是文字 PDF（前 3 页 {scan_chars} 字符）。"
+                    "请把电子矢量版（文字可复制）放在「原件」，盖章扫描版放在「扫描件」。"
+                ),
+            )
 
     cmp = Comparison(
         title=title or f"{orig_f.original_name} vs {scan_f.original_name}",
@@ -138,23 +146,51 @@ def delete_comparison(
     return Message(message="已删除")
 
 
-@router.get("/{cid}/orig.pdf", summary="下载原件 PDF")
+def _serve_file(file_rec):
+    p = Path(file_rec.path)
+    if not p.exists():
+        raise HTTPException(status_code=404, detail="文件已丢失")
+    return FileResponse(p, media_type=file_rec.mime_type, filename=file_rec.original_name or p.name)
+
+
+@router.get("/{cid}/orig.pdf", summary="下载原件（PDF 或 Word）")
 def download_orig(cid: int, _user: CurrentUser, db: Annotated[Session, Depends(get_db)]):
     cmp = db.get(Comparison, cid)
     if not cmp:
         raise HTTPException(status_code=404, detail="任务不存在")
-    p = Path(cmp.orig_file.path)
-    if not p.exists():
-        raise HTTPException(status_code=404, detail="文件已丢失")
-    return FileResponse(p, media_type="application/pdf", filename=cmp.orig_file.original_name or "orig.pdf")
+    return _serve_file(cmp.orig_file)
 
 
-@router.get("/{cid}/scan.pdf", summary="下载扫描件 PDF")
+@router.get("/{cid}/scan.pdf", summary="下载扫描件（PDF 或 Word）")
 def download_scan(cid: int, _user: CurrentUser, db: Annotated[Session, Depends(get_db)]):
     cmp = db.get(Comparison, cid)
     if not cmp:
         raise HTTPException(status_code=404, detail="任务不存在")
-    p = Path(cmp.scan_file.path)
-    if not p.exists():
-        raise HTTPException(status_code=404, detail="文件已丢失")
-    return FileResponse(p, media_type="application/pdf", filename=cmp.scan_file.original_name or "scan.pdf")
+    return _serve_file(cmp.scan_file)
+
+
+@router.get("/{cid}/orig/text.json", summary="获取原件 Word 文本（按段落）")
+def download_orig_word_text(cid: int, _user: CurrentUser, db: Annotated[Session, Depends(get_db)]):
+    """Word 视图组件用：直接拿段落文本数组，避免前端解析 docx。"""
+    cmp = db.get(Comparison, cid)
+    if not cmp:
+        raise HTTPException(status_code=404, detail="任务不存在")
+    if not file_storage.is_word(cmp.orig_file):
+        raise HTTPException(status_code=400, detail="原件不是 Word 文档")
+    from pipeline.word import extract_docx
+    pages = extract_docx(cmp.orig_file.path)
+    lines = [ln.text for ln in pages[0].lines]
+    return {"paragraphs": lines}
+
+
+@router.get("/{cid}/scan/text.json", summary="获取扫描件 Word 文本（按段落）")
+def download_scan_word_text(cid: int, _user: CurrentUser, db: Annotated[Session, Depends(get_db)]):
+    cmp = db.get(Comparison, cid)
+    if not cmp:
+        raise HTTPException(status_code=404, detail="任务不存在")
+    if not file_storage.is_word(cmp.scan_file):
+        raise HTTPException(status_code=400, detail="扫描件不是 Word 文档")
+    from pipeline.word import extract_docx
+    pages = extract_docx(cmp.scan_file.path)
+    lines = [ln.text for ln in pages[0].lines]
+    return {"paragraphs": lines}
