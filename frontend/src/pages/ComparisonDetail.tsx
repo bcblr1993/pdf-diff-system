@@ -74,12 +74,28 @@ export default function ComparisonDetail() {
     }, 0);
   }, [activeDiffId]);
 
-  if (cmpQ.isLoading) return <div className="p-8 text-center text-gray-500">加载中...</div>;
+  if (cmpQ.isLoading) {
+    return <div className="p-8 text-center text-fg-muted text-sm">加载任务中…</div>;
+  }
   if (cmpQ.error || !cmp) {
+    const status = (cmpQ.error as any)?.response?.status;
+    const isNotFound = status === 404;
     return (
-      <div className="p-8 text-center">
-        <div className="text-red-600 mb-2">加载失败</div>
-        <button onClick={() => nav("/")} className="btn-secondary"><ArrowLeft className="w-3.5 h-3.5" /> 返回列表</button>
+      <div className="max-w-md mx-auto py-20 text-center anim-fade-in">
+        <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-critical-soft mb-4">
+          <AlertTriangle className="w-5 h-5 text-critical" />
+        </div>
+        <h2 className="font-display text-xl mb-2 tracking-tightest">
+          {isNotFound ? "该任务不存在" : "加载失败"}
+        </h2>
+        <p className="text-sm text-fg-muted mb-5">
+          {isNotFound
+            ? `任务 #${cid} 可能已被删除，或链接错误。`
+            : errMsg(cmpQ.error)}
+        </p>
+        <button onClick={() => nav("/")} className="btn-secondary">
+          <ArrowLeft className="w-3.5 h-3.5" /> 返回任务列表
+        </button>
       </div>
     );
   }

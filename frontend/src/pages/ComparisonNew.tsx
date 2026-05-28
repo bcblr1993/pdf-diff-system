@@ -75,23 +75,27 @@ export default function ComparisonNew() {
       </p>
 
       {/* 模式切换 */}
-      <div className="card p-1 mb-4 inline-flex">
+      <div className="card p-1 mb-4 inline-flex gap-1">
         <button
           onClick={() => setMode("single")}
-          className={`px-4 py-2 rounded-md text-sm font-medium transition ${
-            mode === "single" ? "bg-blue-600 text-white" : "text-gray-600 hover:bg-gray-100"
+          className={`px-3.5 py-2 rounded text-sm font-medium transition-colors inline-flex items-center gap-1.5 ${
+            mode === "single"
+              ? "bg-accent text-white shadow-sm"
+              : "text-fg-muted hover:bg-bg-subtle"
           }`}
         >
-          <FileText className="w-3.5 h-3.5 inline-block mr-1" /> 单对比
+          <FileText className="w-3.5 h-3.5" /> 单对比
         </button>
         <button
           onClick={() => setMode("batch")}
-          className={`px-4 py-2 rounded-md text-sm font-medium transition ${
-            mode === "batch" ? "bg-blue-600 text-white" : "text-gray-600 hover:bg-gray-100"
+          className={`px-3.5 py-2 rounded text-sm font-medium transition-colors inline-flex items-center gap-1.5 ${
+            mode === "batch"
+              ? "bg-accent text-white shadow-sm"
+              : "text-fg-muted hover:bg-bg-subtle"
           }`}
         >
-          <Layers className="w-3.5 h-3.5 inline-block mr-1" /> 批量对比
-          <span className="ml-1 text-xs opacity-70">1 原件 × N 扫描件</span>
+          <Layers className="w-3.5 h-3.5" /> 批量对比
+          <span className="text-[10.5px] opacity-70 ml-0.5">1 × N</span>
         </button>
       </div>
 
@@ -124,7 +128,7 @@ export default function ComparisonNew() {
             <div className="flex items-center">
               <button
                 onClick={() => { const a = orig; setOrig(scan); setScan(a); }}
-                className="btn-secondary !p-2"
+                className="btn btn-secondary !h-10 !w-10 !p-0"
                 title="交换两侧文件"
                 disabled={!orig && !scan}
               >
@@ -141,9 +145,12 @@ export default function ComparisonNew() {
         )}
 
         <div className="card p-4">
-          <button onClick={() => setShowAdvanced((v) => !v)} className="text-sm text-gray-600 inline-flex items-center gap-1">
+          <button
+            onClick={() => setShowAdvanced((v) => !v)}
+            className="text-sm text-fg-muted hover:text-fg inline-flex items-center gap-1.5 transition-colors"
+          >
             <Settings className="w-3.5 h-3.5" /> 高级设置
-            <span className="text-gray-400">{showAdvanced ? "▲" : "▼"}</span>
+            <span className="text-fg-subtle text-[10px]">{showAdvanced ? "▲" : "▼"}</span>
           </button>
           {showAdvanced && (
             <div className="mt-3 grid grid-cols-2 gap-4">

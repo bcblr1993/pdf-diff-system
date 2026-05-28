@@ -72,7 +72,7 @@ export default function PdfDocument({
     diffsByPage.set(p, arr);
   }
 
-  if (loading) return <div className="p-8 text-center text-gray-500">加载 PDF 中...</div>;
+  if (loading) return <div className="p-8 text-center text-fg-muted text-sm">加载 PDF 中…</div>;
   if (err) return <div className="p-8 text-center text-red-600">{err}</div>;
 
   return (
@@ -81,7 +81,7 @@ export default function PdfDocument({
         const pageDiffs = diffsByPage.get(i) || [];
         return (
           <div key={i} data-page={i} className="space-y-1">
-            <div className="text-xs text-gray-400 px-1">
+            <div className="text-xs text-fg-subtle px-1 tabular-nums">
               {side === "orig" ? "原件" : "扫描件"} · P{i + 1} / {numPages}
               {pageDiffs.length > 0 && <span className="ml-2">· {pageDiffs.length} 处差异</span>}
             </div>

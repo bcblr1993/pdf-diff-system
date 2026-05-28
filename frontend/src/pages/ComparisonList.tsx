@@ -2,11 +2,16 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Trash2, ChevronLeft, ChevronRight, RefreshCw, Plus } from "lucide-react";
+import {
+  Trash2, ChevronLeft, ChevronRight, RefreshCw, Plus, Search,
+  FileText, CheckCircle2, Clock, AlertCircle, Loader2,
+} from "lucide-react";
 import { listComparisons, deleteComparison } from "@/api/endpoints";
-import { fmtAgo, STATUS_LABEL, REVIEW_STATUS_LABEL } from "@/lib/utils";
-import type { ComparisonStatus, ReviewStatus } from "@/types";
+import { fmtAgo, REVIEW_STATUS_LABEL } from "@/lib/utils";
+import type { ComparisonStatus, ReviewStatus, ComparisonBrief } from "@/types";
 import { errMsg } from "@/api/client";
+import { EmptyState } from "@/components/EmptyState";
+import { ComparisonCardSkeleton } from "@/components/Skeleton";
 
 export default function ComparisonList() {
   const nav = useNavigate();
@@ -15,8 +20,9 @@ export default function ComparisonList() {
   const [status, setStatus] = useState<ComparisonStatus | "">("");
   const [reviewStatus, setReviewStatus] = useState<ReviewStatus | "">("");
   const [mineOnly, setMineOnly] = useState(false);
+  const [search, setSearch] = useState("");
 
-  const { data, isFetching, refetch } = useQuery({
+  const { data, isLoading, isFetching, refetch } = useQuery({
     queryKey: ["comparisons", page, status, reviewStatus, mineOnly],
     queryFn: () =>
       listComparisons({
@@ -27,7 +33,6 @@ export default function ComparisonList() {
         ...(mineOnly ? { mine_only: true } : {}),
       }),
     refetchInterval: (q) => {
-      // 列表里有 running 任务则每 3s 刷新
       const items = (q.state.data as any)?.items as any[] | undefined;
       return items?.some((x) => x.status === "running" || x.status === "pending") ? 3000 : false;
     },
@@ -42,108 +47,109 @@ export default function ComparisonList() {
     onError: (e) => toast.error(errMsg(e)),
   });
 
-  const items = data?.items || [];
+  const items = (data?.items || []).filter((it) =>
+    search ? it.title.toLowerCase().includes(search.toLowerCase()) : true
+  );
   const total = data?.total || 0;
   const totalPages = Math.max(1, Math.ceil(total / 20));
 
   return (
-    <div className="max-w-7xl mx-auto p-6">
-      <div className="flex items-center justify-between mb-4">
+    <div className="max-w-[88rem] mx-auto px-5 py-8">
+      {/* 页头 */}
+      <div className="flex items-end justify-between mb-7">
         <div>
-          <h1 className="text-xl font-semibold">对比任务</h1>
-          <p className="text-sm text-gray-500 mt-1">共 {total} 个任务</p>
+          <div className="text-[11px] tracking-[0.2em] uppercase text-fg-muted mb-1.5">Workspace</div>
+          <h1 className="font-display text-[2rem] leading-none tracking-tightest text-fg"
+              style={{ fontVariationSettings: '"opsz" 36, "SOFT" 40' }}>
+            对比任务
+          </h1>
+          <p className="text-[13px] text-fg-muted mt-2 tabular-nums">
+            共 <strong className="text-fg font-medium">{total}</strong> 个 ·
+            处理中 <strong className="text-fg font-medium">
+              {(data?.items || []).filter((x) => x.status === "running" || x.status === "pending").length}
+            </strong>
+          </p>
         </div>
         <div className="flex gap-2">
           <button onClick={() => refetch()} className="btn-secondary" disabled={isFetching}>
             <RefreshCw className={`w-3.5 h-3.5 ${isFetching ? "animate-spin" : ""}`} /> 刷新
           </button>
-          <Link to="/new" className="btn-primary"><Plus className="w-3.5 h-3.5" /> 新建对比</Link>
+          <Link to="/new" className="btn-primary">
+            <Plus className="w-3.5 h-3.5" /> 新建对比
+          </Link>
         </div>
       </div>
 
-      <div className="card p-3 mb-4 flex gap-3 flex-wrap items-center text-sm">
-        <select className="input !w-auto" value={status} onChange={(e) => { setStatus(e.target.value as ComparisonStatus | ""); setPage(1); }}>
-          <option value="">全部状态</option>
-          <option value="pending">等待中</option>
-          <option value="running">处理中</option>
-          <option value="done">已完成</option>
-          <option value="failed">失败</option>
-        </select>
-        <select className="input !w-auto" value={reviewStatus} onChange={(e) => { setReviewStatus(e.target.value as ReviewStatus | ""); setPage(1); }}>
-          <option value="">全部审核状态</option>
-          <option value="not_started">未审核</option>
-          <option value="in_review">审核中</option>
-          <option value="completed">审核完成</option>
-        </select>
-        <label className="inline-flex items-center gap-1.5">
-          <input type="checkbox" checked={mineOnly} onChange={(e) => { setMineOnly(e.target.checked); setPage(1); }} />
-          <span>仅看我创建的</span>
+      {/* 过滤栏 */}
+      <div className="card p-2 mb-4 flex gap-2 items-center text-sm flex-wrap">
+        <div className="relative flex-1 min-w-[200px]">
+          <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-fg-muted pointer-events-none" />
+          <input
+            placeholder="搜索任务标题…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="input !pl-8 !h-8 !text-[13px] border-transparent !bg-transparent"
+          />
+        </div>
+        <FilterPill label="状态" value={status} onChange={(v) => { setStatus(v as any); setPage(1); }}
+          options={[
+            ["", "全部"],
+            ["pending", "等待中"],
+            ["running", "处理中"],
+            ["done", "已完成"],
+            ["failed", "失败"],
+          ]}
+        />
+        <FilterPill label="审核" value={reviewStatus} onChange={(v) => { setReviewStatus(v as any); setPage(1); }}
+          options={[
+            ["", "全部"],
+            ["not_started", "未审核"],
+            ["in_review", "审核中"],
+            ["completed", "审核完成"],
+          ]}
+        />
+        <label className="inline-flex items-center gap-1.5 px-2 cursor-pointer text-[13px]">
+          <input
+            type="checkbox"
+            checked={mineOnly}
+            onChange={(e) => { setMineOnly(e.target.checked); setPage(1); }}
+            className="accent-fg w-3.5 h-3.5"
+          />
+          <span className="text-fg-muted">仅我创建</span>
         </label>
       </div>
 
-      <div className="card overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="bg-gray-50 text-gray-600 text-xs uppercase">
-            <tr>
-              <th className="px-4 py-2 text-left">#</th>
-              <th className="px-4 py-2 text-left">标题</th>
-              <th className="px-4 py-2 text-left">状态</th>
-              <th className="px-4 py-2 text-left">差异</th>
-              <th className="px-4 py-2 text-left">审核</th>
-              <th className="px-4 py-2 text-left">创建</th>
-              <th className="px-4 py-2"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {items.length === 0 && !isFetching && (
-              <tr>
-                <td colSpan={7} className="px-4 py-12 text-center text-gray-400">
-                  暂无任务，<Link to="/new" className="text-blue-600 hover:underline">创建第一个</Link>
-                </td>
-              </tr>
-            )}
-            {items.map((it) => (
-              <tr key={it.id} className="border-t hover:bg-gray-50 cursor-pointer" onClick={() => nav(`/comparisons/${it.id}`)}>
-                <td className="px-4 py-3 text-gray-500">#{it.id}</td>
-                <td className="px-4 py-3 font-medium text-gray-900">{it.title || "(无标题)"}</td>
-                <td className="px-4 py-3">
-                  <StatusBadge it={it} />
-                </td>
-                <td className="px-4 py-3">
-                  {it.summary_json ? (
-                    <div className="flex gap-1 items-center">
-                      <span className="badge bg-orange-100 text-orange-800">{it.summary_json.real} 真</span>
-                      {it.summary_json.critical > 0 && (
-                        <span className="badge bg-red-600 text-white">★{it.summary_json.critical}</span>
-                      )}
-                    </div>
-                  ) : "—"}
-                </td>
-                <td className="px-4 py-3">
-                  <span className="text-xs text-gray-500">{REVIEW_STATUS_LABEL[it.review_status]}</span>
-                </td>
-                <td className="px-4 py-3 text-gray-500 text-xs">{fmtAgo(it.created_at)}</td>
-                <td className="px-4 py-3">
-                  <button
-                    onClick={(e) => { e.stopPropagation(); if (confirm("确认删除该任务？")) delMut.mutate(it.id); }}
-                    className="btn-danger !py-1 !px-2"
-                  >
-                    <Trash2 className="w-3 h-3" />
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      {/* 列表 */}
+      {isLoading ? (
+        <div className="space-y-2">
+          {Array.from({ length: 5 }).map((_, i) => <ComparisonCardSkeleton key={i} />)}
+        </div>
+      ) : items.length === 0 ? (
+        <EmptyState
+          title={search ? "没有匹配的任务" : "还没有任何对比任务"}
+          description={search ? "试试别的关键字" : "上传一份原件和扫描件，开始第一次审核。"}
+          action={!search && (
+            <Link to="/new" className="btn-primary">
+              <Plus className="w-3.5 h-3.5" /> 新建对比
+            </Link>
+          )}
+        />
+      ) : (
+        <div className="space-y-2 stagger">
+          {items.map((it) => (
+            <CompCard key={it.id} item={it} onOpen={() => nav(`/comparisons/${it.id}`)}
+              onDelete={() => { if (confirm("确认删除该任务？")) delMut.mutate(it.id); }} />
+          ))}
+        </div>
+      )}
 
       {totalPages > 1 && (
-        <div className="flex items-center justify-end gap-2 mt-4 text-sm">
-          <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1} className="btn-secondary disabled:opacity-40">
+        <div className="flex items-center justify-center gap-2 mt-6 text-[13px]">
+          <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1} className="btn-ghost !h-8 disabled:opacity-30">
             <ChevronLeft className="w-3.5 h-3.5" /> 上一页
           </button>
-          <span className="text-gray-500">{page} / {totalPages}</span>
-          <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page >= totalPages} className="btn-secondary disabled:opacity-40">
+          <span className="text-fg-muted tabular-nums px-2">第 {page} 页 · 共 {totalPages} 页</span>
+          <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page >= totalPages} className="btn-ghost !h-8 disabled:opacity-30">
             下一页 <ChevronRight className="w-3.5 h-3.5" />
           </button>
         </div>
@@ -152,19 +158,108 @@ export default function ComparisonList() {
   );
 }
 
-function StatusBadge({ it }: { it: any }) {
-  const map: Record<string, string> = {
-    pending: "bg-gray-100 text-gray-700",
-    running: "bg-blue-100 text-blue-800",
-    done: "bg-green-100 text-green-800",
-    failed: "bg-red-100 text-red-800",
-  };
+/** 卡片：单行 horizontal layout，hover 强调 */
+function CompCard({ item, onOpen, onDelete }: {
+  item: ComparisonBrief; onOpen: () => void; onDelete: () => void;
+}) {
+  const s = item.summary_json;
   return (
-    <div className="flex items-center gap-2">
-      <span className={`badge ${map[it.status]}`}>{STATUS_LABEL[it.status as keyof typeof STATUS_LABEL]}</span>
-      {it.status === "running" && (
-        <span className="text-xs text-gray-500">{it.progress_pct}%</span>
+    <article
+      onClick={onOpen}
+      className="card card-hover px-4 py-3 flex items-center gap-4 group"
+    >
+      {/* 编号 + 类型图标 */}
+      <div className="w-12 text-right shrink-0">
+        <div className="text-[10px] tracking-[0.15em] uppercase text-fg-subtle leading-none">No.</div>
+        <div className="font-mono text-[14px] text-fg-muted leading-tight mt-0.5">{String(item.id).padStart(3, "0")}</div>
+      </div>
+
+      <FileText className="w-4 h-4 text-fg-subtle shrink-0" />
+
+      {/* 标题 + 元信息 */}
+      <div className="flex-1 min-w-0">
+        <h3 className="text-[14px] font-medium truncate group-hover:text-accent transition-colors">
+          {item.title || "(无标题)"}
+        </h3>
+        <div className="flex items-center gap-3 mt-1 text-[11.5px] text-fg-muted tabular-nums">
+          <span>{fmtAgo(item.created_at)}</span>
+          <span className="text-fg-subtle">·</span>
+          <span>{REVIEW_STATUS_LABEL[item.review_status as keyof typeof REVIEW_STATUS_LABEL]}</span>
+        </div>
+      </div>
+
+      {/* 状态 */}
+      <StatusChip status={item.status} pct={item.progress_pct} />
+
+      {/* 差异统计 */}
+      {s ? (
+        <div className="flex items-center gap-3 px-3 border-l border-border tabular-nums">
+          <Stat n={s.real} label="真实" />
+          <Stat n={s.critical} label="关键" critical />
+          <Stat n={s.insert + s.handwritten} label="新增" />
+          <Stat n={s.delete} label="删除" />
+        </div>
+      ) : (
+        <div className="w-32 text-center text-[12px] text-fg-subtle italic">
+          {item.status === "running" ? `处理中 ${item.progress_pct}%` : "等待开始"}
+        </div>
       )}
+
+      {/* 操作 */}
+      <button
+        onClick={(e) => { e.stopPropagation(); onDelete(); }}
+        className="btn-ghost !h-8 !w-8 !p-0 opacity-0 group-hover:opacity-100 hover:!text-critical"
+        title="删除任务"
+      >
+        <Trash2 className="w-3.5 h-3.5" />
+      </button>
+    </article>
+  );
+}
+
+function Stat({ n, label, critical }: { n: number; label: string; critical?: boolean }) {
+  return (
+    <div className="text-center min-w-[34px]">
+      <div className={`text-[14px] font-medium leading-none tabular-nums ${
+        critical && n > 0 ? "text-critical" : n > 0 ? "text-fg" : "text-fg-subtle"
+      }`}>
+        {critical && n > 0 && <span className="star mr-0.5">★</span>}{n}
+      </div>
+      <div className="text-[10px] text-fg-subtle mt-1 tracking-wide">{label}</div>
+    </div>
+  );
+}
+
+function StatusChip({ status, pct }: { status: string; pct: number }) {
+  const config: Record<string, { icon: React.ReactNode; label: string; cls: string }> = {
+    pending: { icon: <Clock className="w-3 h-3" />, label: "等待", cls: "badge-pending" },
+    running: { icon: <Loader2 className="w-3 h-3 animate-spin" />, label: `${pct}%`, cls: "badge-running" },
+    done: { icon: <CheckCircle2 className="w-3 h-3" />, label: "完成", cls: "badge-done" },
+    failed: { icon: <AlertCircle className="w-3 h-3" />, label: "失败", cls: "badge-failed" },
+  };
+  const c = config[status] || config.pending;
+  return (
+    <span className={`badge ${c.cls} !text-[10.5px] tracking-wide`}>
+      {c.icon} {c.label}
+    </span>
+  );
+}
+
+function FilterPill({
+  label, value, onChange, options,
+}: { label: string; value: string; onChange: (v: string) => void; options: [string, string][] }) {
+  return (
+    <div className="inline-flex items-center gap-1.5 px-2.5 h-8 rounded-md hover:bg-bg-subtle transition-colors">
+      <span className="text-[11px] text-fg-muted">{label}</span>
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="bg-transparent text-[13px] outline-none cursor-pointer font-medium"
+      >
+        {options.map(([v, l]) => (
+          <option key={v} value={v}>{l}</option>
+        ))}
+      </select>
     </div>
   );
 }

@@ -98,14 +98,15 @@ export default function DiffSidebar({
   }, [filtered, activeIdx, activeDiffId, comparisonId]);
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="border-b border-gray-200 p-2 space-y-2 bg-white">
-        <div className="flex items-center gap-1 text-xs">
-          <label className="inline-flex items-center gap-1">
-            <input type="checkbox" checked={includeNoise} onChange={(e) => onIncludeNoiseChange(e.target.checked)} />
-            <span>显示噪声（位移/页脚/单字）</span>
-          </label>
-        </div>
+    <div className="flex flex-col h-full bg-bg-elevated">
+      {/* 筛选器 */}
+      <div className="border-b border-border p-3 space-y-2.5">
+        <label className="inline-flex items-center gap-2 cursor-pointer text-[12px] text-fg-muted">
+          <input type="checkbox" checked={includeNoise}
+                 onChange={(e) => onIncludeNoiseChange(e.target.checked)}
+                 className="accent-fg w-3.5 h-3.5" />
+          <span>显示噪声（位移 / 页脚 / 单字）</span>
+        </label>
         <div className="flex flex-wrap gap-1">
           {CATEGORIES.map((c) => (
             <button
@@ -115,36 +116,39 @@ export default function DiffSidebar({
                 if (s.has(c)) s.delete(c); else s.add(c);
                 setCatFilter(s);
               }}
-              className={`badge cursor-pointer ${
+              className={`badge cursor-pointer transition-all ${
                 catFilter.has(c)
                   ? `badge-${c}`
-                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                  : "bg-bg-tint text-fg-muted hover:bg-bg-subtle"
               }`}
             >
               {CATEGORY_LABEL[c]}
             </button>
           ))}
         </div>
-        <div className="flex items-center gap-2 text-xs">
-          <span className="text-gray-500">审核:</span>
+        <div className="flex items-center gap-1 text-[12px]">
+          <span className="text-fg-subtle mr-1.5">审核:</span>
           {(["all", "yes", "no"] as const).map((v) => (
             <button
               key={v}
               onClick={() => setReviewedFilter(v)}
-              className={`badge cursor-pointer ${
-                reviewedFilter === v ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-600"
+              className={`badge cursor-pointer transition-all ${
+                reviewedFilter === v ? "bg-fg text-bg" : "bg-bg-tint text-fg-muted"
               }`}
             >
               {v === "all" ? "全部" : v === "yes" ? "已审" : "未审"}
             </button>
           ))}
-          <span className="ml-auto text-gray-500">{filtered.length} / {diffs.length}</span>
+          <span className="ml-auto text-fg-subtle tabular-nums">
+            {filtered.length} <span className="text-fg-subtle/60">/ {diffs.length}</span>
+          </span>
         </div>
       </div>
 
+      {/* 列表 */}
       <div ref={listRef} className="flex-1 overflow-y-auto">
         {filtered.length === 0 && (
-          <div className="p-8 text-center text-gray-400 text-sm">无符合条件的差异</div>
+          <div className="p-10 text-center text-fg-subtle text-[13px]">无符合条件的差异</div>
         )}
         {filtered.map((d) => (
           <DiffRow
@@ -157,10 +161,12 @@ export default function DiffSidebar({
         ))}
       </div>
 
-      <div className="border-t bg-gray-50 p-2 text-xs text-gray-500">
-        快捷键：↑↓ 切换 · <kbd className="px-1 bg-white border rounded">Y</kbd> 确认 ·{" "}
-        <kbd className="px-1 bg-white border rounded">N</kbd> 忽略 ·{" "}
-        <kbd className="px-1 bg-white border rounded">U</kbd> 撤销
+      {/* 快捷键提示 */}
+      <div className="border-t border-border bg-bg-subtle px-3 py-2 text-[11px] text-fg-muted flex items-center gap-3 flex-wrap">
+        <span className="inline-flex items-center gap-1"><span className="kbd">↑</span><span className="kbd">↓</span> 切换</span>
+        <span className="inline-flex items-center gap-1"><span className="kbd">Y</span> 确认</span>
+        <span className="inline-flex items-center gap-1"><span className="kbd">N</span> 忽略</span>
+        <span className="inline-flex items-center gap-1"><span className="kbd">U</span> 撤销</span>
       </div>
     </div>
   );
@@ -176,62 +182,70 @@ function DiffRow({
 }) {
   const [showNote, setShowNote] = useState(false);
   const page = d.scan_page >= 0 ? d.scan_page : d.orig_page;
+  const leftBar =
+    d.review_action === "confirmed" ? "border-l-[3px] border-l-critical" :
+    d.review_action === "ignored" ? "border-l-[3px] border-l-fg-subtle opacity-50" :
+    "border-l-[3px] border-l-transparent";
+
   return (
     <div
       data-row-id={d.id}
-      className={`border-b border-gray-100 px-2 py-2 cursor-pointer transition-colors ${
-        active ? "bg-blue-50" : "hover:bg-gray-50"
-      } ${d.review_action === "confirmed" ? "border-l-4 border-l-red-500" :
-         d.review_action === "ignored" ? "border-l-4 border-l-gray-400 opacity-60" : ""}`}
+      className={`px-3 py-2.5 cursor-pointer transition-all border-b border-border/60 ${leftBar} ${
+        active ? "bg-accent-soft/50" : "hover:bg-bg-subtle"
+      }`}
       onClick={onClick}
     >
-      <div className="flex items-center gap-1.5 mb-1">
-        <span className="text-xs text-gray-400 font-mono">#{d.seq_no}</span>
+      <div className="flex items-center gap-1.5 mb-1.5">
+        <span className="text-[10.5px] text-fg-subtle font-mono tabular-nums">#{String(d.seq_no).padStart(3, '0')}</span>
         <span className={`badge badge-${d.category}`}>{CATEGORY_LABEL[d.category]}</span>
         {d.severity === "critical" && <span className="badge badge-critical">★ 关键</span>}
-        <span className="text-xs text-gray-500 ml-auto">P{page + 1}</span>
+        <span className="text-[10.5px] text-fg-muted ml-auto tabular-nums">P{page + 1}</span>
       </div>
-      <div className="space-y-1 text-xs font-mono">
+      <div className="space-y-1 text-[12px] font-mono leading-relaxed">
         {d.orig_text && (
-          <div className="text-red-700">
-            <span className="text-gray-400">原</span> {d.orig_text.length > 50 ? d.orig_text.slice(0, 50) + "…" : d.orig_text}
+          <div className="text-critical-soft-fg">
+            <span className="text-fg-subtle inline-block w-3">原</span> {d.orig_text.length > 50 ? d.orig_text.slice(0, 50) + "…" : d.orig_text}
           </div>
         )}
         {d.scan_text && (
-          <div className="text-green-700">
-            <span className="text-gray-400">扫</span> {d.scan_text.length > 50 ? d.scan_text.slice(0, 50) + "…" : d.scan_text}
+          <div className="text-success-soft-fg">
+            <span className="text-fg-subtle inline-block w-3">扫</span> {d.scan_text.length > 50 ? d.scan_text.slice(0, 50) + "…" : d.scan_text}
           </div>
         )}
         {d.context && (
-          <div className="text-gray-400 text-[10px] truncate">{d.context}</div>
+          <div className="text-fg-subtle text-[10.5px] truncate mt-1">{d.context}</div>
         )}
         {d.review_note && (
-          <div className="text-gray-600 italic">💬 {d.review_note}</div>
+          <div className="text-fg-muted italic text-[11.5px] mt-1 pl-3 border-l border-border">💬 {d.review_note}</div>
         )}
       </div>
       {active && (
-        <div className="mt-2 flex gap-1" onClick={(e) => e.stopPropagation()}>
+        <div className="mt-2.5 flex gap-1.5 anim-fade-in" onClick={(e) => e.stopPropagation()}>
           <button
             onClick={() => onReview(d.review_action === "confirmed" ? null : "confirmed")}
-            className={`btn !py-1 !px-2 text-xs ${
-              d.review_action === "confirmed" ? "bg-red-600 text-white border-red-600" : "bg-white border-gray-300"
+            className={`inline-flex items-center gap-1 px-2 h-7 rounded text-[11.5px] font-medium transition-all border ${
+              d.review_action === "confirmed"
+                ? "bg-critical text-white border-critical"
+                : "bg-bg-elevated border-border hover:border-critical hover:text-critical"
             }`}
-            title="Y: 确认"
+            title="快捷键 Y"
           >
             <Check className="w-3 h-3" /> 确认
           </button>
           <button
             onClick={() => onReview(d.review_action === "ignored" ? null : "ignored")}
-            className={`btn !py-1 !px-2 text-xs ${
-              d.review_action === "ignored" ? "bg-gray-500 text-white border-gray-500" : "bg-white border-gray-300"
+            className={`inline-flex items-center gap-1 px-2 h-7 rounded text-[11.5px] font-medium transition-all border ${
+              d.review_action === "ignored"
+                ? "bg-fg-muted text-bg border-fg-muted"
+                : "bg-bg-elevated border-border hover:border-fg-muted"
             }`}
-            title="N: 忽略"
+            title="快捷键 N"
           >
             <X className="w-3 h-3" /> 忽略
           </button>
           <button
             onClick={() => setShowNote((v) => !v)}
-            className="btn !py-1 !px-2 text-xs bg-white border-gray-300"
+            className="inline-flex items-center gap-1 px-2 h-7 rounded text-[11.5px] font-medium border bg-bg-elevated border-border hover:border-fg transition-all ml-auto"
             title="批注"
           >
             <MessageSquare className="w-3 h-3" />
