@@ -70,9 +70,16 @@ export default function ComparisonNew() {
   return (
     <div className="max-w-3xl mx-auto p-6">
       <h1 className="text-xl font-semibold mb-1">新建对比任务</h1>
-      <p className="text-sm text-gray-500 mb-4">
-        上传原件（电子矢量 PDF）与扫描件（盖章扫描 PDF），系统自动 OCR 与对比。
+      <p className="text-sm text-fg-muted mb-3">
+        上传原件与对方版本，系统自动对比并产出差异清单。
       </p>
+      <div className="flex items-center gap-2 mb-4 text-[11.5px]">
+        <span className="text-fg-subtle tracking-wide">支持格式：</span>
+        <span className="badge badge-insert font-mono">.pdf</span>
+        <span className="badge badge-insert font-mono">.docx</span>
+        <span className="text-fg-subtle">·</span>
+        <span className="text-fg-subtle">单份 ≤ 100MB</span>
+      </div>
 
       {/* 模式切换 */}
       <div className="card p-1 mb-4 inline-flex gap-1">
@@ -101,11 +108,11 @@ export default function ComparisonNew() {
 
       <div className="card p-3 mb-4 bg-amber-50 border-amber-200 flex items-start gap-2 text-sm">
         <AlertTriangle className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
-        <div className="text-amber-900">
+        <div className="text-amber-900 leading-relaxed">
           <strong>注意上传位置：</strong>
-          「原件」放<strong>电子矢量版</strong>（文字可复制选中的 PDF）；
-          「扫描件」放<strong>盖章扫描版</strong>（图像 PDF）。
-          位置放反会导致结果完全异常。
+          「原件」放<strong>电子矢量版</strong>（文字可复制的 PDF 或 Word）；
+          「扫描件」放<strong>对方返回版</strong>（盖章扫描 PDF 或对方修改后的 Word）。
+          支持两份都是 PDF / 两份都是 Word / PDF×Word 任意组合；位置放反会导致结果完全异常。
         </div>
       </div>
 
@@ -124,7 +131,7 @@ export default function ComparisonNew() {
 
         {mode === "single" ? (
           <div className="grid grid-cols-[1fr_auto_1fr] gap-3 items-stretch">
-            <DropZone label="① 原件 PDF（电子版）" hint="文字可选可复制" file={orig} onChange={setOrig} />
+            <DropZone label="① 原件（电子版）" hint="PDF 或 Word（文字可复制）" file={orig} onChange={setOrig} />
             <div className="flex items-center">
               <button
                 onClick={() => { const a = orig; setOrig(scan); setScan(a); }}
@@ -135,12 +142,12 @@ export default function ComparisonNew() {
                 <ArrowLeftRight className="w-4 h-4" />
               </button>
             </div>
-            <DropZone label="② 扫描件 PDF（盖章版）" hint="盖章后扫描的图像 PDF" file={scan} onChange={setScan} />
+            <DropZone label="② 对方版本" hint="盖章扫描 PDF 或对方修改后的 Word" file={scan} onChange={setScan} />
           </div>
         ) : (
           <>
-            <DropZone label="① 原件 PDF（电子版，1 份）" hint="所有扫描件将与该原件对比" file={orig} onChange={setOrig} />
-            <MultiDropZone label="② 扫描件 PDF（盖章版，多份）" files={scans} onChange={setScans} />
+            <DropZone label="① 原件（电子版，1 份）" hint="PDF 或 Word；所有对方版本都与该原件对比" file={orig} onChange={setOrig} />
+            <MultiDropZone label="② 对方版本（多份）" files={scans} onChange={setScans} />
           </>
         )}
 
@@ -220,7 +227,8 @@ function DropZone({
           onDrop={onDrop}
         >
           <Upload className="w-8 h-8 mx-auto text-gray-400 mb-2" />
-          <div className="text-sm text-gray-600">拖拽或点击选择 PDF</div>
+          <div className="text-sm text-fg">拖拽或点击选择文件</div>
+          <div className="text-[10.5px] text-fg-subtle mt-0.5 font-mono">.pdf · .docx</div>
           <div className="text-xs text-gray-400 mt-1">{hint}</div>
           <input
             type="file" className="hidden" accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
@@ -278,8 +286,9 @@ function MultiDropZone({
         onDrop={onDrop}
       >
         <Plus className="w-6 h-6 mx-auto text-gray-400 mb-1" />
-        <div className="text-sm text-gray-600">拖拽或点击添加多份 PDF</div>
-        <div className="text-xs text-gray-400">支持多选；单次最多 50 份</div>
+        <div className="text-sm text-fg">拖拽或点击添加多份文件</div>
+        <div className="text-[10.5px] text-fg-subtle mt-0.5 font-mono">.pdf · .docx</div>
+        <div className="text-[11px] text-fg-subtle mt-1">支持多选；单次最多 50 份</div>
         <input
           type="file" multiple className="hidden" accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
           onChange={(e) => { addFiles(e.target.files); e.target.value = ""; }}
