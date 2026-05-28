@@ -39,8 +39,8 @@ export default function Login() {
     <div className="min-h-screen grid lg:grid-cols-[1.1fr_1fr] bg-bg">
       <Toaster richColors position="top-center" />
 
-      {/* 左侧装饰面板 */}
-      <aside className="hidden lg:flex relative overflow-hidden flex-col justify-between p-12 noise-bg"
+      {/* 左侧装饰面板 —— bg-zinc-900 是 Tailwind 内置 hex class，老浏览器也能渲染 */}
+      <aside className="hidden lg:flex relative overflow-hidden flex-col justify-between p-12 noise-bg bg-zinc-900 text-zinc-50"
              style={{ background: "var(--fg)", color: "var(--bg)" }}>
         {/* 装饰：浮动文档 */}
         <DecorativeDocs />
