@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -18,6 +18,7 @@ function isWord(f?: { mime_type?: string; original_name?: string }) {
 }
 import DiffSidebar from "@/components/DiffSidebar";
 import ProgressPanel from "@/components/ProgressPanel";
+import ComparisonAxis from "@/components/ComparisonAxis";
 import { fmtTime, REVIEW_STATUS_LABEL } from "@/lib/utils";
 
 export default function ComparisonDetail() {
@@ -28,6 +29,25 @@ export default function ComparisonDetail() {
   const token = useAuthStore((s) => s.token);
   const [activeDiffId, setActiveDiffId] = useState<number | null>(null);
   const [includeNoise, setIncludeNoise] = useState(false);
+
+  // 双侧滚动同步：监听一侧 scroll，按比例同步另一侧
+  const origScrollRef = useRef<HTMLDivElement>(null);
+  const scanScrollRef = useRef<HTMLDivElement>(null);
+  const syncingRef = useRef(false);
+
+  function handleScroll(src: "orig" | "scan", e: React.UIEvent<HTMLDivElement>) {
+    if (syncingRef.current) return;
+    syncingRef.current = true;
+    const el = e.currentTarget;
+    const peer = src === "orig" ? scanScrollRef.current : origScrollRef.current;
+    if (peer) {
+      const max = Math.max(el.scrollHeight - el.clientHeight, 1);
+      const ratio = el.scrollTop / max;
+      const peerMax = Math.max(peer.scrollHeight - peer.clientHeight, 1);
+      peer.scrollTop = ratio * peerMax;
+    }
+    requestAnimationFrame(() => { syncingRef.current = false; });
+  }
   const [scrollAnchor, setScrollAnchor] = useState<{ side: string; page: number; ts: number } | null>(null);
 
   const cmpQ = useQuery({
@@ -138,36 +158,48 @@ export default function ComparisonDetail() {
       <Toolbar cmp={cmp} onBack={() => nav("/")} onComplete={() => {
         if (confirm("确认结束审核？未审核的条目将被自动归为 ignored")) completeMut.mutate();
       }} />
-      <div className="flex-1 grid grid-cols-[1fr_400px] overflow-hidden">
-        <div className="grid grid-cols-2 overflow-hidden border-r border-gray-200">
-          <div className="overflow-y-auto bg-gray-100">
-            {isWord(cmp.orig_file) ? (
-              <DocxViewer cid={cid} side="orig" diffs={diffs} activeDiffId={activeDiffId} onDiffClick={(d) => setActiveDiffId(d.id)} />
-            ) : (
-              <PdfDocument
-                url={origPdfUrl}
-                side="orig"
-                diffs={diffs}
-                activeDiffId={activeDiffId}
-                onSelectDiff={setActiveDiffId}
-                pageScrollAnchor={scrollAnchor}
-              />
-            )}
-          </div>
-          <div className="overflow-y-auto bg-gray-100 border-l border-gray-200">
-            {isWord(cmp.scan_file) ? (
-              <DocxViewer cid={cid} side="scan" diffs={diffs} activeDiffId={activeDiffId} onDiffClick={(d) => setActiveDiffId(d.id)} />
-            ) : (
-              <PdfDocument
-                url={scanPdfUrl}
-                side="scan"
-                diffs={diffs}
-                activeDiffId={activeDiffId}
-                onSelectDiff={setActiveDiffId}
-                pageScrollAnchor={scrollAnchor}
-              />
-            )}
-          </div>
+      <div className="flex-1 grid grid-cols-[1fr_32px_1fr_400px] overflow-hidden">
+        {/* 左侧：原件 */}
+        <div
+          ref={origScrollRef}
+          onScroll={(e) => handleScroll("orig", e)}
+          className="overflow-y-auto bg-bg-subtle"
+        >
+          {isWord(cmp.orig_file) ? (
+            <DocxViewer cid={cid} side="orig" diffs={diffs} activeDiffId={activeDiffId} onDiffClick={(d) => setActiveDiffId(d.id)} />
+          ) : (
+            <PdfDocument
+              url={origPdfUrl}
+              side="orig"
+              diffs={diffs}
+              activeDiffId={activeDiffId}
+              onSelectDiff={setActiveDiffId}
+              pageScrollAnchor={scrollAnchor}
+            />
+          )}
+        </div>
+
+        {/* 中间对比轴 */}
+        <ComparisonAxis origRef={origScrollRef} scanRef={scanScrollRef} />
+
+        {/* 右侧：对方版本 */}
+        <div
+          ref={scanScrollRef}
+          onScroll={(e) => handleScroll("scan", e)}
+          className="overflow-y-auto bg-bg-subtle"
+        >
+          {isWord(cmp.scan_file) ? (
+            <DocxViewer cid={cid} side="scan" diffs={diffs} activeDiffId={activeDiffId} onDiffClick={(d) => setActiveDiffId(d.id)} />
+          ) : (
+            <PdfDocument
+              url={scanPdfUrl}
+              side="scan"
+              diffs={diffs}
+              activeDiffId={activeDiffId}
+              onSelectDiff={setActiveDiffId}
+              pageScrollAnchor={scrollAnchor}
+            />
+          )}
         </div>
         <div className="bg-white overflow-hidden">
           {diffsQ.isLoading ? (
