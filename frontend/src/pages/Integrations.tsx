@@ -26,8 +26,8 @@ export default function Integrations() {
 
   if (user?.role !== "admin") {
     return (
-      <div className="max-w-3xl mx-auto p-6 text-center text-gray-500">
-        <Key className="w-10 h-10 mx-auto mb-2 text-gray-300" />
+      <div className="max-w-3xl mx-auto p-6 text-center text-fg-muted">
+        <Key className="w-10 h-10 mx-auto mb-2 text-fg-subtle" />
         <div>本页仅管理员可见</div>
       </div>
     );
@@ -36,13 +36,13 @@ export default function Integrations() {
   return (
     <div className="max-w-5xl mx-auto p-6">
       <h1 className="text-xl font-semibold mb-1">集成中心</h1>
-      <p className="text-sm text-gray-500 mb-4">API Key 用于外部系统调用 /api/v1 端点；Webhook 用于推送任务完成事件。</p>
+      <p className="text-sm text-fg-muted mb-4">API Key 用于外部系统调用 /api/v1 端点；Webhook 用于推送任务完成事件。</p>
 
       <div className="card p-1 mb-4 inline-flex">
         <button
           onClick={() => setTab("keys")}
           className={`px-4 py-2 rounded-md text-sm font-medium ${
-            tab === "keys" ? "bg-blue-600 text-white" : "text-gray-600 hover:bg-gray-100"
+            tab === "keys" ? "bg-accent text-white" : "text-fg-muted hover:bg-bg-tint"
           }`}
         >
           <Key className="w-3.5 h-3.5 inline-block mr-1" /> API Keys
@@ -50,7 +50,7 @@ export default function Integrations() {
         <button
           onClick={() => setTab("hooks")}
           className={`px-4 py-2 rounded-md text-sm font-medium ${
-            tab === "hooks" ? "bg-blue-600 text-white" : "text-gray-600 hover:bg-gray-100"
+            tab === "hooks" ? "bg-accent text-white" : "text-fg-muted hover:bg-bg-tint"
           }`}
         >
           <WebhookIcon className="w-3.5 h-3.5 inline-block mr-1" /> Webhooks
@@ -93,7 +93,7 @@ function ApiKeysPanel() {
   return (
     <>
       {createdKey && (
-        <div className="card p-4 mb-4 bg-amber-50 border-amber-300">
+        <div className="card p-4 mb-4 border">
           <div className="font-medium text-amber-900 mb-2">⚠ 完整 Key 只显示这一次，请立即复制保存：</div>
           <div className="flex items-center gap-2 bg-white p-3 rounded border border-amber-200 font-mono text-sm break-all">
             <span className="flex-1">{createdKey}</span>
@@ -103,7 +103,7 @@ function ApiKeysPanel() {
             >
               <Copy className="w-3.5 h-3.5" /> 复制
             </button>
-            <button onClick={() => setCreatedKey(null)} className="text-gray-400 hover:text-gray-700">
+            <button onClick={() => setCreatedKey(null)} className="text-fg-subtle hover:text-fg">
               <X className="w-4 h-4" />
             </button>
           </div>
@@ -128,7 +128,7 @@ function ApiKeysPanel() {
 
       <div className="card overflow-hidden">
         <table className="w-full text-sm">
-          <thead className="bg-gray-50 text-gray-600 text-xs uppercase">
+          <thead className="bg-bg-subtle text-fg-muted text-xs uppercase">
             <tr>
               <th className="px-4 py-2 text-left">名称</th>
               <th className="px-4 py-2 text-left">Key 前缀</th>
@@ -141,20 +141,20 @@ function ApiKeysPanel() {
           </thead>
           <tbody>
             {items.length === 0 && (
-              <tr><td colSpan={7} className="px-4 py-8 text-center text-gray-400">暂无 API Key</td></tr>
+              <tr><td colSpan={7} className="px-4 py-8 text-center text-fg-subtle">暂无 API Key</td></tr>
             )}
             {items.map((k) => (
               <tr key={k.id} className="border-t">
                 <td className="px-4 py-3 font-medium">{k.name}</td>
-                <td className="px-4 py-3 font-mono text-xs text-gray-600">{k.key_prefix}***</td>
+                <td className="px-4 py-3 font-mono text-xs text-fg-muted">{k.key_prefix}***</td>
                 <td className="px-4 py-3">{k.call_count}</td>
-                <td className="px-4 py-3 text-xs text-gray-500">{k.last_used_at ? fmtAgo(k.last_used_at) : "—"}</td>
+                <td className="px-4 py-3 text-xs text-fg-muted">{k.last_used_at ? fmtAgo(k.last_used_at) : "—"}</td>
                 <td className="px-4 py-3">
                   {k.is_active
-                    ? <span className="badge bg-green-100 text-green-800">启用</span>
-                    : <span className="badge bg-gray-200 text-gray-600">已吊销</span>}
+                    ? <span className="badge badge-done">启用</span>
+                    : <span className="badge badge-pending">已吊销</span>}
                 </td>
-                <td className="px-4 py-3 text-xs text-gray-500">{fmtAgo(k.created_at)}</td>
+                <td className="px-4 py-3 text-xs text-fg-muted">{fmtAgo(k.created_at)}</td>
                 <td className="px-4 py-3 flex gap-1">
                   {k.is_active && (
                     <button onClick={() => { if (confirm("确认吊销该 Key？")) disableMut.mutate(k.id); }}
@@ -242,7 +242,7 @@ function WebhooksPanel() {
   return (
     <>
       {createdSecret && (
-        <div className="card p-4 mb-4 bg-amber-50 border-amber-300">
+        <div className="card p-4 mb-4 border">
           <div className="font-medium text-amber-900 mb-2">⚠ HMAC 签名密钥只显示这一次：</div>
           <div className="flex items-center gap-2 bg-white p-3 rounded border border-amber-200 font-mono text-sm break-all">
             <span className="flex-1">{createdSecret}</span>
@@ -250,7 +250,7 @@ function WebhooksPanel() {
                     className="btn-secondary !py-1 !px-2 shrink-0">
               <Copy className="w-3.5 h-3.5" /> 复制
             </button>
-            <button onClick={() => setCreatedSecret(null)} className="text-gray-400 hover:text-gray-700">
+            <button onClick={() => setCreatedSecret(null)} className="text-fg-subtle hover:text-fg">
               <X className="w-4 h-4" />
             </button>
           </div>
@@ -276,7 +276,7 @@ function WebhooksPanel() {
 
       <div className="card overflow-hidden">
         <table className="w-full text-sm">
-          <thead className="bg-gray-50 text-gray-600 text-xs uppercase">
+          <thead className="bg-bg-subtle text-fg-muted text-xs uppercase">
             <tr>
               <th className="px-4 py-2 text-left">名称</th>
               <th className="px-4 py-2 text-left">URL</th>
@@ -287,21 +287,21 @@ function WebhooksPanel() {
           </thead>
           <tbody>
             {items.length === 0 && (
-              <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-400">暂无 Webhook</td></tr>
+              <tr><td colSpan={5} className="px-4 py-8 text-center text-fg-subtle">暂无 Webhook</td></tr>
             )}
             {items.map((h) => (
               <tr key={h.id} className="border-t">
                 <td className="px-4 py-3 font-medium">{h.name || "(无名)"}</td>
-                <td className="px-4 py-3 font-mono text-xs text-gray-600 max-w-[280px] truncate">{h.url}</td>
+                <td className="px-4 py-3 font-mono text-xs text-fg-muted max-w-[280px] truncate">{h.url}</td>
                 <td className="px-4 py-3 text-xs">
                   {h.events_json.map((e) => (
-                    <span key={e} className="badge bg-blue-100 text-blue-700 mr-1">{EVENT_LABEL[e as WebhookEvent] || e}</span>
+                    <span key={e} className="badge badge-running mr-1">{EVENT_LABEL[e as WebhookEvent] || e}</span>
                   ))}
                 </td>
                 <td className="px-4 py-3">
                   <button
                     onClick={() => updateMut.mutate({ id: h.id, body: { is_active: !h.is_active } })}
-                    className={`badge cursor-pointer ${h.is_active ? "bg-green-100 text-green-800" : "bg-gray-200 text-gray-600"}`}
+                    className={`badge cursor-pointer ${h.is_active ? "badge-done" : "badge-pending"}`}
                   >
                     {h.is_active ? "启用" : "已停"}
                   </button>
@@ -362,7 +362,7 @@ function NewHookForm({ onSubmit, onCancel }: {
                   setEvents(s);
                 }}
               />
-              <span className="badge bg-blue-100 text-blue-700">{EVENT_LABEL[e]}</span>
+              <span className="badge badge-running">{EVENT_LABEL[e]}</span>
             </label>
           ))}
         </div>
@@ -397,16 +397,16 @@ function DeliveriesModal({ wid, onClose }: { wid: number; onClose: () => void })
            onClick={(e) => e.stopPropagation()}>
         <div className="px-4 py-3 border-b flex items-center">
           <h2 className="font-medium">投递记录 (Webhook #{wid})</h2>
-          <button onClick={onClose} className="ml-auto text-gray-400 hover:text-gray-700">
+          <button onClick={onClose} className="ml-auto text-fg-subtle hover:text-fg">
             <X className="w-4 h-4" />
           </button>
         </div>
         <div className="flex-1 overflow-y-auto">
           {items.length === 0 ? (
-            <div className="p-8 text-center text-gray-400 text-sm">暂无投递记录</div>
+            <div className="p-8 text-center text-fg-subtle text-sm">暂无投递记录</div>
           ) : (
             <table className="w-full text-sm">
-              <thead className="bg-gray-50 text-gray-600 text-xs uppercase sticky top-0">
+              <thead className="bg-bg-subtle text-fg-muted text-xs uppercase sticky top-0">
                 <tr>
                   <th className="px-3 py-2 text-left">事件</th>
                   <th className="px-3 py-2 text-left">状态</th>
@@ -420,13 +420,13 @@ function DeliveriesModal({ wid, onClose }: { wid: number; onClose: () => void })
                   <tr key={d.id} className="border-t">
                     <td className="px-3 py-2 font-mono text-xs">{d.event}</td>
                     <td className="px-3 py-2">
-                      {d.status === "success" && <span className="inline-flex items-center gap-1 text-green-700"><CheckCircle2 className="w-3 h-3" /> 成功</span>}
-                      {d.status === "failed" && <span className="inline-flex items-center gap-1 text-red-700"><XCircle className="w-3 h-3" /> 失败</span>}
-                      {d.status === "pending" && <span className="inline-flex items-center gap-1 text-gray-500"><Clock className="w-3 h-3" /> 处理中</span>}
+                      {d.status === "success" && <span className="inline-flex items-center gap-1 text-success-soft-fg"><CheckCircle2 className="w-3 h-3" /> 成功</span>}
+                      {d.status === "failed" && <span className="inline-flex items-center gap-1 text-critical-soft-fg"><XCircle className="w-3 h-3" /> 失败</span>}
+                      {d.status === "pending" && <span className="inline-flex items-center gap-1 text-fg-muted"><Clock className="w-3 h-3" /> 处理中</span>}
                     </td>
                     <td className="px-3 py-2">{d.response_status ?? "—"}</td>
                     <td className="px-3 py-2">{d.attempts}</td>
-                    <td className="px-3 py-2 text-xs text-gray-500">{fmtTime(d.created_at)}</td>
+                    <td className="px-3 py-2 text-xs text-fg-muted">{fmtTime(d.created_at)}</td>
                   </tr>
                 ))}
               </tbody>
