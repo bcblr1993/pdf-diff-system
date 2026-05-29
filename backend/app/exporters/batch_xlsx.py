@@ -63,7 +63,7 @@ def _build_overview(wb: Workbook, batch: BatchJob, comps: list[Comparison],
     title_font = Font(bold=True, size=16)
     label_font = Font(bold=True, color="6B7280")
     header_font = Font(bold=True, color="FFFFFF")
-    header_fill = PatternFill("solid", fgColor="374151")
+    header_fill = PatternFill("solid", fgColor="2563EB")  # 品牌蓝表头
 
     # ── 标题与元信息 ──
     ws["A1"] = f"批量对比汇总 - {batch.title or f'#{batch.id}'}"

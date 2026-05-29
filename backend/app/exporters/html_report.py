@@ -111,7 +111,7 @@ def export_html(db: Session, comparison_id: int, *, dpi: int = 100, include_nois
 <style>
 * {{ box-sizing: border-box; }}
 body {{ margin: 0; font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif; background: #f5f6f8; color: #1f2937; }}
-.top {{ background: #fff; padding: 16px 24px; border-bottom: 1px solid #e5e7eb; }}
+.top {{ background: #fff; padding: 16px 24px; border-bottom: 1px solid #e5e7eb; border-top: 3px solid #2563eb; }}
 .top h1 {{ margin: 0 0 4px; font-size: 18px; }}
 .top .meta {{ font-size: 12px; color: #6b7280; }}
 .summary {{ display: flex; gap: 12px; padding: 12px 24px; background: #fff; border-bottom: 1px solid #e5e7eb; flex-wrap: wrap; }}

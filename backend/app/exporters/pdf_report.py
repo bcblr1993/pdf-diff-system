@@ -214,7 +214,7 @@ def _diff_table(diffs: list[Diff], reviewer_map: dict) -> Table:
     style = [
         ("FONT", (0, 0), (-1, -1), CN_FONT, 8),
         ("FONTSIZE", (0, 0), (-1, 0), 9),
-        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#374151")),
+        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#2563EB")),  # 品牌蓝表头
         ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
         ("ALIGN", (0, 0), (2, -1), "CENTER"),
         ("VALIGN", (0, 0), (-1, -1), "TOP"),

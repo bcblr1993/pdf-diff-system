@@ -26,6 +26,9 @@ CATEGORY_LABEL = {
 }
 
 SEVERITY_LABEL = {"critical": "关键", "normal": "普通", "info": "信息"}
+
+# 品牌主色（Classic 蓝，与前端 --accent 一致）
+BRAND_BLUE = "2563EB"
 REVIEW_LABEL = {"confirmed": "✓ 确认", "ignored": "✗ 忽略", None: "—"}
 
 CATEGORY_FILL = {
@@ -154,7 +157,7 @@ def _build_diffs_sheet(ws, cmp: Comparison, diffs: list[Diff], reviewer_map: dic
     for col, h in enumerate(headers, start=1):
         cell = ws.cell(row=1, column=col, value=h)
         cell.font = Font(bold=True, color="FFFFFF")
-        cell.fill = PatternFill("solid", fgColor="374151")
+        cell.fill = PatternFill("solid", fgColor=BRAND_BLUE)  # 品牌蓝表头
         cell.alignment = Alignment(horizontal="center", vertical="center")
         cell.border = THIN_BORDER
 
