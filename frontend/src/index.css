@@ -43,77 +43,131 @@
   --duration: 180ms;
   --duration-slow: 280ms;
 
-  /* —— 中性色 ——
-     双重声明：旧浏览器（不识别 oklch / color-mix）会用第 1 行 hex，
-     现代浏览器（Chrome 111+ / Safari 15.4+ / Edge 111+）覆盖为 oklch。*/
-  --bg: #f9fafb;             --bg: oklch(0.985 0.003 250);
-  --bg-elevated: #ffffff;    --bg-elevated: oklch(1 0 0);
-  --bg-subtle: #f3f4f6;      --bg-subtle: oklch(0.965 0.004 250);
-  --bg-tint: #e5e7eb;        --bg-tint: oklch(0.955 0.005 250);
+  /* —— 中性色（OKLCH，现代浏览器）—— */
+  --bg: oklch(0.985 0.003 250);
+  --bg-elevated: oklch(1 0 0);
+  --bg-subtle: oklch(0.965 0.004 250);
+  --bg-tint: oklch(0.955 0.005 250);
 
-  --fg: #1f2937;             --fg: oklch(0.18 0.012 250);
-  --fg-muted: #6b7280;       --fg-muted: oklch(0.48 0.010 250);
-  --fg-subtle: #9ca3af;      --fg-subtle: oklch(0.65 0.008 250);
-  --fg-on-accent: #ffffff;   --fg-on-accent: oklch(0.99 0 0);
+  --fg: oklch(0.18 0.012 250);
+  --fg-muted: oklch(0.48 0.010 250);
+  --fg-subtle: oklch(0.65 0.008 250);
+  --fg-on-accent: oklch(0.99 0 0);
 
-  --border: #e5e7eb;         --border: oklch(0.91 0.006 250);
-  --border-strong: #d1d5db;  --border-strong: oklch(0.85 0.008 250);
+  --border: oklch(0.91 0.006 250);
+  --border-strong: oklch(0.85 0.008 250);
 
-  /* —— 状态色（共享，hex fallback）—— */
-  --critical: #dc2626;            --critical: oklch(0.58 0.20 27);
-  --critical-soft: #fef2f2;       --critical-soft: oklch(0.955 0.04 27);
-  --critical-soft-fg: #991b1b;    --critical-soft-fg: oklch(0.48 0.18 27);
+  /* —— 状态色 —— */
+  --critical: oklch(0.58 0.20 27);
+  --critical-soft: oklch(0.955 0.04 27);
+  --critical-soft-fg: oklch(0.48 0.18 27);
 
-  --warning: #f59e0b;             --warning: oklch(0.73 0.16 65);
-  --warning-soft: #fef3c7;        --warning-soft: oklch(0.95 0.05 75);
-  --warning-soft-fg: #92400e;     --warning-soft-fg: oklch(0.46 0.12 70);
+  --warning: oklch(0.73 0.16 65);
+  --warning-soft: oklch(0.95 0.05 75);
+  --warning-soft-fg: oklch(0.46 0.12 70);
 
-  --info: #2563eb;                --info: oklch(0.55 0.13 235);
-  --info-soft: #dbeafe;           --info-soft: oklch(0.95 0.03 235);
-  --info-soft-fg: #1e40af;        --info-soft-fg: oklch(0.45 0.12 235);
+  --info: oklch(0.55 0.13 235);
+  --info-soft: oklch(0.95 0.03 235);
+  --info-soft-fg: oklch(0.45 0.12 235);
 
-  --success: #16a34a;             --success: oklch(0.55 0.12 150);
-  --success-soft: #dcfce7;        --success-soft: oklch(0.94 0.05 150);
-  --success-soft-fg: #14532d;     --success-soft-fg: oklch(0.38 0.11 150);
+  --success: oklch(0.55 0.12 150);
+  --success-soft: oklch(0.94 0.05 150);
+  --success-soft-fg: oklch(0.38 0.11 150);
 
-  /* —— 差异类别色（共享，hex fallback）—— */
-  --diff-insert: #4ade80;         --diff-insert: oklch(0.68 0.14 145);
-  --diff-delete: #dc2626;         --diff-delete: oklch(0.62 0.20 27);
-  --diff-replace: #fbbf24;        --diff-replace: oklch(0.74 0.15 80);
-  --diff-stamp: #9ca3af;          --diff-stamp: oklch(0.75 0.005 80);
-  --diff-moved: #93c5fd;          --diff-moved: oklch(0.70 0.10 240);
+  /* —— 差异类别色 —— */
+  --diff-insert: oklch(0.68 0.14 145);
+  --diff-delete: oklch(0.62 0.20 27);
+  --diff-replace: oklch(0.74 0.15 80);
+  --diff-stamp: oklch(0.75 0.005 80);
+  --diff-moved: oklch(0.70 0.10 240);
 }
 
 /* —— Classic Blue（默认）—— */
 :root,
 :root[data-palette="classic"] {
-  --accent: #2563eb;          --accent: oklch(0.55 0.20 255);
-  --accent-hover: #1d4ed8;    --accent-hover: oklch(0.49 0.21 255);
-  --accent-active: #1e40af;   --accent-active: oklch(0.45 0.22 255);
-  --accent-soft: #dbeafe;     --accent-soft: oklch(0.95 0.03 255);
-  --accent-soft-fg: #1e40af;  --accent-soft-fg: oklch(0.42 0.18 255);
-  --accent-ring: rgba(37, 99, 235, 0.22);
+  --accent: oklch(0.55 0.20 255);
+  --accent-hover: oklch(0.49 0.21 255);
+  --accent-active: oklch(0.45 0.22 255);
+  --accent-soft: oklch(0.95 0.03 255);
+  --accent-soft-fg: oklch(0.42 0.18 255);
   --accent-ring: oklch(0.55 0.20 255 / 0.22);
 }
 
 /* —— Editorial Ink（备选）—— */
 :root[data-palette="editorial"] {
-  --accent: #2d5e4d;          --accent: oklch(0.42 0.075 165);
-  --accent-hover: #234e3f;    --accent-hover: oklch(0.38 0.078 165);
-  --accent-active: #1c413a;   --accent-active: oklch(0.34 0.080 165);
-  --accent-soft: #e6f2ec;     --accent-soft: oklch(0.94 0.025 165);
-  --accent-soft-fg: #234e3f;  --accent-soft-fg: oklch(0.34 0.07 165);
-  --accent-ring: rgba(45, 94, 77, 0.22);
+  --accent: oklch(0.42 0.075 165);
+  --accent-hover: oklch(0.38 0.078 165);
+  --accent-active: oklch(0.34 0.080 165);
+  --accent-soft: oklch(0.94 0.025 165);
+  --accent-soft-fg: oklch(0.34 0.07 165);
   --accent-ring: oklch(0.42 0.075 165 / 0.22);
-  /* editorial 用更暖的纸色背景 */
-  --bg: #faf9f6;              --bg: oklch(0.985 0.004 80);
-  --bg-subtle: #f4f3ee;       --bg-subtle: oklch(0.965 0.005 80);
-  --bg-tint: #e9e7df;         --bg-tint: oklch(0.955 0.006 80);
-  --fg: #2a261e;              --fg: oklch(0.18 0.008 80);
-  --fg-muted: #71695b;        --fg-muted: oklch(0.48 0.008 80);
-  --fg-subtle: #9e9586;       --fg-subtle: oklch(0.62 0.006 80);
-  --border: #e8e5dc;          --border: oklch(0.91 0.005 80);
-  --border-strong: #d6d2c6;   --border-strong: oklch(0.85 0.006 80);
+  --bg: oklch(0.985 0.004 80);
+  --bg-subtle: oklch(0.965 0.005 80);
+  --bg-tint: oklch(0.955 0.006 80);
+  --fg: oklch(0.18 0.008 80);
+  --fg-muted: oklch(0.48 0.008 80);
+  --fg-subtle: oklch(0.62 0.006 80);
+  --border: oklch(0.91 0.005 80);
+  --border-strong: oklch(0.85 0.006 80);
+}
+
+/* ────────────────────────────────────────────────────────────
+   旧浏览器 fallback（不支持 OKLCH）
+   用 @supports not 包裹，CSS minifier 不会跨 @supports 块去重，
+   确保 hex 备选值保留到生产构建。
+   ──────────────────────────────────────────────────────────── */
+@supports not (color: oklch(0% 0 0)) {
+  :root, :root[data-palette="classic"] {
+    --bg: #f9fafb;
+    --bg-elevated: #ffffff;
+    --bg-subtle: #f3f4f6;
+    --bg-tint: #e5e7eb;
+    --fg: #1f2937;
+    --fg-muted: #6b7280;
+    --fg-subtle: #9ca3af;
+    --fg-on-accent: #ffffff;
+    --border: #e5e7eb;
+    --border-strong: #d1d5db;
+    --critical: #dc2626;
+    --critical-soft: #fef2f2;
+    --critical-soft-fg: #991b1b;
+    --warning: #f59e0b;
+    --warning-soft: #fef3c7;
+    --warning-soft-fg: #92400e;
+    --info: #2563eb;
+    --info-soft: #dbeafe;
+    --info-soft-fg: #1e40af;
+    --success: #16a34a;
+    --success-soft: #dcfce7;
+    --success-soft-fg: #14532d;
+    --diff-insert: #4ade80;
+    --diff-delete: #dc2626;
+    --diff-replace: #fbbf24;
+    --diff-stamp: #9ca3af;
+    --diff-moved: #93c5fd;
+    --accent: #2563eb;
+    --accent-hover: #1d4ed8;
+    --accent-active: #1e40af;
+    --accent-soft: #dbeafe;
+    --accent-soft-fg: #1e40af;
+    --accent-ring: rgba(37, 99, 235, 0.22);
+  }
+  :root[data-palette="editorial"] {
+    --accent: #2d5e4d;
+    --accent-hover: #234e3f;
+    --accent-active: #1c413a;
+    --accent-soft: #e6f2ec;
+    --accent-soft-fg: #234e3f;
+    --accent-ring: rgba(45, 94, 77, 0.22);
+    --bg: #faf9f6;
+    --bg-subtle: #f4f3ee;
+    --bg-tint: #e9e7df;
+    --fg: #2a261e;
+    --fg-muted: #71695b;
+    --fg-subtle: #9e9586;
+    --border: #e8e5dc;
+    --border-strong: #d6d2c6;
+  }
 }
 
 /* —— Dark Mode（共享，但 accent 跟随 palette）—— */
