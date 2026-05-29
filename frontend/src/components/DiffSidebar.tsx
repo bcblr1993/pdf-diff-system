@@ -42,6 +42,17 @@ export default function DiffSidebar({
     });
   }, [diffs, catFilter, sevFilter, reviewedFilter]);
 
+  // 关键字段差异（v11 字段层，context 带「【关键字段」前缀）单独成组置顶
+  const { fieldDiffs, otherDiffs } = useMemo(() => {
+    const field: Diff[] = [];
+    const other: Diff[] = [];
+    for (const d of filtered) {
+      if ((d.context || "").startsWith("【关键字段")) field.push(d);
+      else other.push(d);
+    }
+    return { fieldDiffs: field, otherDiffs: other };
+  }, [filtered]);
+
   // 自动把激活条滚到可视区
   useEffect(() => {
     if (!activeDiffId || !listRef.current) return;
@@ -150,7 +161,39 @@ export default function DiffSidebar({
         {filtered.length === 0 && (
           <div className="p-10 text-center text-fg-subtle text-[13px]">无符合条件的差异</div>
         )}
-        {filtered.map((d) => (
+
+        {/* 关键字段组（置顶强调） */}
+        {fieldDiffs.length > 0 && (
+          <>
+            <div className="sticky top-0 z-10 flex items-center gap-1.5 px-3 py-1.5 bg-critical-soft border-b border-border">
+              <span className="star text-[12px]">★</span>
+              <span className="text-[11px] font-semibold text-critical-soft-fg tracking-wide">
+                关键字段差异
+              </span>
+              <span className="text-[10.5px] text-critical-soft-fg/70 tabular-nums ml-auto">
+                {fieldDiffs.length} 项
+              </span>
+            </div>
+            {fieldDiffs.map((d) => (
+              <DiffRow
+                key={d.id}
+                d={d}
+                active={d.id === activeDiffId}
+                onClick={() => onSelect(d.id)}
+                onReview={(action) => review(d.id, action)}
+                emphasize
+              />
+            ))}
+          </>
+        )}
+
+        {/* 其他差异组 */}
+        {fieldDiffs.length > 0 && otherDiffs.length > 0 && (
+          <div className="px-3 py-1.5 bg-bg-subtle border-b border-border text-[11px] font-medium text-fg-muted tracking-wide">
+            其他差异 <span className="text-fg-subtle tabular-nums">{otherDiffs.length} 项</span>
+          </div>
+        )}
+        {otherDiffs.map((d) => (
           <DiffRow
             key={d.id}
             d={d}
@@ -173,32 +216,45 @@ export default function DiffSidebar({
 }
 
 function DiffRow({
-  d, active, onClick, onReview,
+  d, active, onClick, onReview, emphasize,
 }: {
   d: Diff;
   active: boolean;
   onClick: () => void;
   onReview: (action: ReviewAction | null) => void;
+  emphasize?: boolean;
 }) {
   const [showNote, setShowNote] = useState(false);
   const page = d.scan_page >= 0 ? d.scan_page : d.orig_page;
   const leftBar =
     d.review_action === "confirmed" ? "border-l-[3px] border-l-critical" :
     d.review_action === "ignored" ? "border-l-[3px] border-l-fg-subtle opacity-50" :
+    emphasize ? "border-l-[3px] border-l-critical/40" :
     "border-l-[3px] border-l-transparent";
+
+  // 关键字段行：从 context「【关键字段·合同金额（大写）·删除】」提取字段名
+  const fieldLabel = emphasize
+    ? (d.context.match(/【关键字段·([^·】]+)/)?.[1] ?? "关键字段")
+    : null;
 
   return (
     <div
       data-row-id={d.id}
       className={`px-3 py-2.5 cursor-pointer transition-all border-b border-border/60 ${leftBar} ${
-        active ? "bg-accent-soft/50" : "hover:bg-bg-subtle"
+        active ? "bg-accent-soft/50" : emphasize ? "bg-critical-soft/30 hover:bg-critical-soft/50" : "hover:bg-bg-subtle"
       }`}
       onClick={onClick}
     >
       <div className="flex items-center gap-1.5 mb-1.5">
         <span className="text-[10.5px] text-fg-subtle font-mono tabular-nums">#{String(d.seq_no).padStart(3, '0')}</span>
-        <span className={`badge badge-${d.category}`}>{CATEGORY_LABEL[d.category]}</span>
-        {d.severity === "critical" && <span className="badge badge-critical">★ 关键</span>}
+        {fieldLabel ? (
+          <span className="badge badge-critical">★ {fieldLabel}</span>
+        ) : (
+          <>
+            <span className={`badge badge-${d.category}`}>{CATEGORY_LABEL[d.category]}</span>
+            {d.severity === "critical" && <span className="badge badge-critical">★ 关键</span>}
+          </>
+        )}
         <span className="text-[10.5px] text-fg-muted ml-auto tabular-nums">P{page + 1}</span>
       </div>
       <div className="space-y-1 text-[12px] font-mono leading-relaxed">
@@ -209,10 +265,11 @@ function DiffRow({
         )}
         {d.scan_text && (
           <div className="text-success-soft-fg">
-            <span className="text-fg-subtle inline-block w-3">扫</span> {d.scan_text.length > 50 ? d.scan_text.slice(0, 50) + "…" : d.scan_text}
+            <span className="text-fg-subtle inline-block w-3">{emphasize ? "新" : "扫"}</span> {d.scan_text.length > 50 ? d.scan_text.slice(0, 50) + "…" : d.scan_text}
           </div>
         )}
-        {d.context && (
+        {/* 关键字段行不重复显示 context（已在 badge 体现），普通行显示 */}
+        {d.context && !emphasize && (
           <div className="text-fg-subtle text-[10.5px] truncate mt-1">{d.context}</div>
         )}
         {d.review_note && (
